@@ -89,6 +89,9 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(Unit) {
                 viewModel.initializeApp(context)
+                if (!com.raqeeb.app.util.BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) {
+                    com.raqeeb.app.util.BatteryOptimizationHelper.requestIgnoreBatteryOptimizations(context)
+                }
                 if (!PermissionHelper.hasUsageStatsPermission(context)) {
                     showFirstLaunchUsagePrompt = true
                 }

@@ -106,6 +106,7 @@ class MainViewModel : ViewModel() {
         this.appCtx = appContext
         refreshPermissionsOnly(appContext)
         DailyAzkarReceiver.scheduleDailyAlarms(appContext)
+        com.raqeeb.app.service.RaqeebKeepAliveService.start(appContext)
 
         _uiState.update { it.copy(challenges = loadChallengesFromLocalCache(appContext)) }
 
