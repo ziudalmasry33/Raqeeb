@@ -56,6 +56,14 @@
                 android:value="Local DNS filtering for family safety and digital wellbeing" />
         </service>
 
+            <receiver android:name=".widget.DailyAzkarReceiver" android:exported="false" />
+        <receiver android:name=".widget.RaqeebWidgetProvider" android:exported="true" android:label="رقيب - أذكار وآيات">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ACTION_NEXT_WIDGET_ZIKR" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/raqeeb_widget_info" />
+        </receiver>
     </application>
 
 </manifest>
