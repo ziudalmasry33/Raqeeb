@@ -1,0 +1,2 @@
+-keep class com.raqeeb.app.data.local.entity.** { *; }
+-keep class com.raqeeb.app.service.** { *; }

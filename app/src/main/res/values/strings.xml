@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">RAQEEB</string>
+    <string name="app_tagline">Your companion on the path of righteousness. Reminding you when you forget.</string>
+    <string name="accessibility_service_description">RAQEEB uses Accessibility Service strictly on-device to detect restricted website addresses in supported browsers and remind you when opening restricted apps. No browsing history is ever recorded or uploaded.</string>
+</resources>
