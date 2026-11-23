@@ -40,7 +40,7 @@ fun WebsitesScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Card(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(18.dp),
             colors = CardDefaults.cardColors(containerColor = DeepEmerald),
             border = BorderStroke(1.dp, AccentGold.copy(alpha = 0.4f))
         ) {
@@ -52,9 +52,9 @@ fun WebsitesScreen(
                 Icon(Icons.Rounded.Lock, contentDescription = null, tint = AccentGold)
                 Text(
                     text = if (isArabic)
-                        "حماية الخصوصية مُفعّلة: جميع المواقع الإباحية والمضرة محظورة ومُشفّرة محلياً دون إظهار أسمائها."
+                        "الخصوصية الكاملة: جميع النطاقات غير اللائقة والضارة مُصفّاة ومُشفّرة محلياً دون إظهار أسمائها."
                     else
-                        "Privacy Shield Active: All adult & harmful sites are blocked and masked locally.",
+                        "Full Privacy: All inappropriate & harmful domains are filtered and masked locally.",
                     color = SoftWhite,
                     fontSize = 12.sp,
                     lineHeight = 18.sp
@@ -66,9 +66,10 @@ fun WebsitesScreen(
             value = inputDomain,
             onValueChange = { inputDomain = it },
             modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
             singleLine = true,
             label = {
-                Text(if (isArabic) "إضافة موقع إضافي للحظر (يُخفى تلقائياً)" else "Add extra domain to block (auto-masked)")
+                Text(if (isArabic) "إضافة نطاق إضافي للحظر (يُخفى تلقائياً)" else "Add extra domain to block (auto-masked)")
             },
             trailingIcon = {
                 IconButton(
@@ -84,12 +85,13 @@ fun WebsitesScreen(
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 84.dp)
         ) {
             items(domains, key = { it.id }) { item ->
                 Card(
                     modifier = Modifier.animateContentSize(),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Row(

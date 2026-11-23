@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">رقيب | RAQEEB</string>
+    <string name="app_name">رقيب</string>
     <string name="app_tagline">رفيقك على طريق الاستقامة.. يذكّرك حين تغفل.</string>
-    <string name="accessibility_service_description">يستخدم تطبيق رقيب خدمة إمكانية الوصول محلياً على جهازك فقط للتعرف على روابط المواقع المحظورة في المتصفحات المدعومة والتذكير عند فتح التطبيقات المقيدة. لا يتم تخزين أو إرسال سجل تصفحك نهائياً.</string>
+    <string name="accessibility_service_description">يستخدم تطبيق رقيب خدمة إمكانية الوصول محلياً على جهازك فقط للتعرف على التطبيقات المقيدة وتذكيرك بلطف. تبقى جميع بياناتك على جهازك ولا تُرسل لأي جهة.</string>
 </resources>

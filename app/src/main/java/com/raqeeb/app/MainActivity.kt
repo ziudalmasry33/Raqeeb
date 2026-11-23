@@ -13,20 +13,29 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -75,7 +84,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            // فحص الصلاحيات عند أول تشغيل وعند العودة للتطبيق
             LaunchedEffect(Unit) {
                 viewModel.refreshSystemState(context, RaqeebVpnService.isRunning)
                 if (!PermissionHelper.hasUsageStatsPermission(context)) {
@@ -106,11 +114,20 @@ class MainActivity : ComponentActivity() {
                             TopAppBar(
                                 title = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Rounded.Shield, contentDescription = null, tint = AccentGold)
-                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .size(34.dp)
+                                                .clip(CircleShape)
+                                                .background(AccentGold.copy(alpha = 0.15f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(Icons.Rounded.Shield, contentDescription = null, tint = AccentGold, modifier = Modifier.size(20.dp))
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
                                         Text(
-                                            text = if (state.isArabic) "رقيب | RAQEEB" else "RAQEEB",
-                                            fontWeight = FontWeight.Bold
+                                            text = if (state.isArabic) "رقيب" else "RAQEEB",
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 20.sp
                                         )
                                     }
                                 },
@@ -135,37 +152,13 @@ class MainActivity : ComponentActivity() {
                                     titleContentColor = SoftWhite
                                 )
                             )
-                        },
-                        bottomBar = {
-                            NavigationBar {
-                                NavigationBarItem(
-                                    selected = selectedTab == 0,
-                                    onClick = { selectedTab = 0 },
-                                    icon = { Icon(Icons.Rounded.Dashboard, contentDescription = null) },
-                                    label = { Text(if (state.isArabic) "الرئيسية" else "Home") }
-                                )
-                                NavigationBarItem(
-                                    selected = selectedTab == 1,
-                                    onClick = { selectedTab = 1 },
-                                    icon = { Icon(Icons.Rounded.Language, contentDescription = null) },
-                                    label = { Text(if (state.isArabic) "المواقع" else "Sites") }
-                                )
-                                NavigationBarItem(
-                                    selected = selectedTab == 2,
-                                    onClick = { selectedTab = 2 },
-                                    icon = { Icon(Icons.Rounded.Apps, contentDescription = null) },
-                                    label = { Text(if (state.isArabic) "التطبيقات" else "Apps") }
-                                )
-                                NavigationBarItem(
-                                    selected = selectedTab == 3,
-                                    onClick = { selectedTab = 3 },
-                                    icon = { Icon(Icons.Rounded.EmojiEvents, contentDescription = null) },
-                                    label = { Text(if (state.isArabic) "التحديات" else "Goals") }
-                                )
-                            }
                         }
                     ) { innerPadding ->
-                        Box(modifier = Modifier.padding(innerPadding)) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding)
+                        ) {
                             AnimatedContent(
                                 targetState = selectedTab,
                                 transitionSpec = { fadeIn() togetherWith fadeOut() },
@@ -228,9 +221,57 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             }
+
+                            // شريط التنقل السفلي العائم العصري (Floating Pill Navigation Bar)
+                            Surface(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(horizontal = 20.dp, vertical = 14.dp)
+                                    .fillMaxWidth(),
+                                shape = RoundedCornerShape(50),
+                                color = DeepEmerald.copy(alpha = 0.96f),
+                                border = BorderStroke(1.dp, AccentGold.copy(alpha = 0.45f)),
+                                shadowElevation = 10.dp
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                                        .fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceAround,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    FloatingNavItem(
+                                        selected = selectedTab == 0,
+                                        label = if (state.isArabic) "الرئيسية" else "Home",
+                                        filledIcon = Icons.Rounded.SpaceDashboard,
+                                        outlinedIcon = Icons.Outlined.SpaceDashboard,
+                                        onClick = { selectedTab = 0 }
+                                    )
+                                    FloatingNavItem(
+                                        selected = selectedTab == 1,
+                                        label = if (state.isArabic) "المواقع" else "Sites",
+                                        filledIcon = Icons.Rounded.VerifiedUser,
+                                        outlinedIcon = Icons.Outlined.VerifiedUser,
+                                        onClick = { selectedTab = 1 }
+                                    )
+                                    FloatingNavItem(
+                                        selected = selectedTab == 2,
+                                        label = if (state.isArabic) "التطبيقات" else "Apps",
+                                        filledIcon = Icons.Rounded.Widgets,
+                                        outlinedIcon = Icons.Outlined.Widgets,
+                                        onClick = { selectedTab = 2 }
+                                    )
+                                    FloatingNavItem(
+                                        selected = selectedTab == 3,
+                                        label = if (state.isArabic) "التحديات" else "Goals",
+                                        filledIcon = Icons.Rounded.EmojiEvents,
+                                        outlinedIcon = Icons.Outlined.EmojiEvents,
+                                        onClick = { selectedTab = 3 }
+                                    )
+                                }
+                            }
                         }
 
-                        // نافذة طلب صلاحية تتبع الاستخدام عند أول فتح للتطبيق
                         if (showFirstLaunchUsagePrompt) {
                             AlertDialog(
                                 onDismissRequest = { showFirstLaunchUsagePrompt = false },
@@ -285,6 +326,40 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FloatingNavItem(
+    selected: Boolean,
+    label: String,
+    filledIcon: ImageVector,
+    outlinedIcon: ImageVector,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(if (selected) AccentGold else Color.Transparent)
+            .clickable { onClick() }
+            .padding(horizontal = if (selected) 14.dp else 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Icon(
+            imageVector = if (selected) filledIcon else outlinedIcon,
+            contentDescription = label,
+            tint = if (selected) DeepEmerald else SoftWhite.copy(alpha = 0.75f),
+            modifier = Modifier.size(22.dp)
+        )
+        if (selected) {
+            Text(
+                text = label,
+                color = DeepEmerald,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }

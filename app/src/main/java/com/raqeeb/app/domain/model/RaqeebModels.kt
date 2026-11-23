@@ -9,32 +9,33 @@ enum class ProtectionMode(
     REMINDER(
         titleAr = "وضع التذكير",
         titleEn = "Reminder Mode",
-        descAr = "يكتشف التطبيقات والمواقع المقيدة ويرسل إشعارات تذكير إيمانية دون حظر الوصول.",
-        descEn = "Detects restricted sites/apps and sends gentle Islamic notifications without blocking."
+        descAr = "يرسل تذكيرات إيمانية لطيفة بعد 5 ثوانٍ من فتح التطبيقات المقيدة دون حظر.",
+        descEn = "Sends gentle Islamic reminders 5s after opening restricted apps without blocking."
     ),
     SMART(
         titleAr = "الحماية الذكية",
-        titleEn = "Smart Protection",
-        descAr = "يحظر كافة المواقع الإباحية والضارة تلقائياً عبر DNS العائلي الآمن ويُذكّرك عند فتح التطبيقات المقيدة.",
-        descEn = "Automatically blocks all adult/harmful sites via Family DNS and reminds on restricted apps."
+        titleEn = "Smart Shield",
+        descAr = "تصفية ذكية فائقة السرعة للمواقع الضارة وغير اللائقة مع تنبيهات هادئة للتطبيقات.",
+        descEn = "Ultra-fast safe DNS filtering for harmful content with calm app reminders."
     ),
     STRICT(
         titleAr = "الحماية الصارمة",
-        titleEn = "Strict Protection",
-        descAr = "حظر شامل لكل المواقع الإباحية وإغلاق فوري لأي تطبيق مقيد عند محاولة فتحه.",
-        descEn = "Full adult domain blocking and immediate home redirection on restricted apps."
+        titleEn = "Strict Guard",
+        descAr = "حظر كامل للنطاقات غير اللائقة وإغلاق فوري لأي تطبيق مقيد لحفظ وقتك وبصرك.",
+        descEn = "Full safe domain filtering and immediate redirection on restricted apps."
     )
 }
 
 enum class DomainCategory(val labelAr: String, val labelEn: String) {
-    ADULT("قاعدة المواقع الإباحية (مدمجة)", "Adult Sites Shield (Built-in)"),
-    INAPPROPRIATE("محتوى غير لائق", "Inappropriate Content"),
-    CUSTOM("مواقع مخصصة", "User-Defined")
+    SAFE_SHIELD("قاعدة حفظ البصر والتصفح الآمن", "Safe Browsing & Gaze Shield"),
+    HARMFUL("مواقع المراهنات والمحتوى الضار", "Harmful & Distracting Sites"),
+    CUSTOM("نطاقات مخصصة", "Custom Restricted Domains")
 }
 
 data class RestrictedDomain(
     val id: Long,
     val maskedLabel: String,
+    val rawDomain: String,
     val category: DomainCategory,
     val isEnabled: Boolean = true,
     val isBuiltInShield: Boolean = false

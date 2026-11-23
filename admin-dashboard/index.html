@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>رقيب | لوحة التحكم الإدارية</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+  <script src="[https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2](https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2)"></script>
 </head>
 <body class="bg-[#0A1210] text-[#F4F6F5] min-h-screen font-sans">
   <header class="bg-[#062E22] border-b border-[#D4AF37]/40 p-4 flex justify-between items-center">
@@ -14,17 +14,15 @@
   </header>
 
   <main class="max-w-4xl mx-auto p-6">
-    <!-- إعداد الاتصال بـ Supabase -->
     <section id="configSection" class="bg-[#121E1B] border border-[#D4AF37]/30 rounded-xl p-6 mb-6">
       <h2 class="text-lg font-bold text-[#D4AF37] mb-3">1. ربط قاعدة بيانات Supabase المجانية</h2>
       <div class="grid gap-3">
-        <input id="sbUrl" type="text" placeholder="Supabase Project URL (https://xxx.supabase.co)" class="p-3 rounded bg-[#0A1210] border border-gray-700 text-sm" />
+        <input id="sbUrl" type="text" placeholder="Supabase Project URL ([https://xxx.supabase.co](https://xxx.supabase.co))" class="p-3 rounded bg-[#0A1210] border border-gray-700 text-sm" />
         <input id="sbKey" type="text" placeholder="Supabase Anon Public Key" class="p-3 rounded bg-[#0A1210] border border-gray-700 text-sm" />
         <button onclick="saveConfig()" class="bg-[#D4AF37] text-[#062E22] font-bold py-2 rounded">حفظ الاتصال</button>
       </div>
     </section>
 
-    <!-- تسجيل دخول المدير -->
     <section id="loginSection" class="bg-[#121E1B] border border-[#D4AF37]/30 rounded-xl p-6 mb-6">
       <h2 class="text-lg font-bold text-[#D4AF37] mb-3">2. دخول المشرفين (RBAC)</h2>
       <div class="grid gap-3">
@@ -34,7 +32,6 @@
       </div>
     </section>
 
-    <!-- لوحة إدارة المحتوى -->
     <section id="adminPanel" class="hidden space-y-6">
       <div class="bg-[#121E1B] border border-[#D4AF37]/30 rounded-xl p-6">
         <h2 class="text-lg font-bold text-[#D4AF37] mb-4">إضافة تذكير إسلامي موثّق</h2>
@@ -54,12 +51,12 @@
       </div>
 
       <div class="bg-[#121E1B] border border-[#D4AF37]/30 rounded-xl p-6">
-        <h2 class="text-lg font-bold text-[#D4AF37] mb-4">إضافة نطاق محظور جديد لقاعدة التصفية</h2>
+        <h2 class="text-lg font-bold text-[#D4AF37] mb-4">إضافة نطاق لقاعدة التصفية الآمنة</h2>
         <div class="flex gap-2">
           <input id="dName" placeholder="example.com" class="flex-1 p-3 rounded bg-[#0A1210] border border-gray-700" />
           <select id="dCat" class="p-3 rounded bg-[#0A1210] border border-gray-700">
-            <option value="ADULT">محتوى للبالغين</option>
-            <option value="INAPPROPRIATE">محتوى غير لائق</option>
+            <option value="ADULT">محتوى غير لائق</option>
+            <option value="INAPPROPRIATE">محتوى ضار ومشتت</option>
           </select>
           <button onclick="addBlockedDomain()" class="bg-[#D4AF37] text-[#062E22] font-bold px-4 rounded">إضافة</button>
         </div>
@@ -114,7 +111,7 @@
         category: document.getElementById('dCat').value,
         is_active: true
       });
-      alert(error ? error.message : 'تمت إضافة النطاق لقاعدة الحظر!');
+      alert(error ? error.message : 'تمت إضافة النطاق لقاعدة التصفية!');
     }
   </script>
 </body>

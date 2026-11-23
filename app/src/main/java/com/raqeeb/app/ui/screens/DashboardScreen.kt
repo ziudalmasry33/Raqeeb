@@ -6,18 +6,22 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -44,33 +48,186 @@ fun DashboardScreen(
     onNavigateWebsites: () -> Unit,
     onNavigateApps: () -> Unit
 ) {
-    val shieldScale by animateFloatAsState(
-        targetValue = if (state.isProtectionEnabled) 1.05f else 0.95f,
+    val orbScale by animateFloatAsState(
+        targetValue = if (state.isProtectionEnabled) 1f else 0.94f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "shieldScale"
+        label = "orbScale"
     )
-    val statusColor by animateColorAsState(
+    val ringColor by animateColorAsState(
         targetValue = if (state.isProtectionEnabled) AccentGold else AlertRed,
-        label = "statusColor"
+        label = "ringColor"
     )
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        // 1. بطاقة حالة الحماية
+        // 1. مركز الحماية الدائري العصري (Modern Central Protection Orb)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(28.dp))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(DeepEmerald, Color(0xFF08221A))
+                    )
+                )
+                .border(1.dp, ringColor.copy(alpha = 0.35f), RoundedCornerShape(28.dp))
+                .padding(22.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(116.dp)
+                        .scale(orbScale)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.radialGradient(
+                                listOf(ringColor.copy(alpha = 0.25f), Color.Transparent)
+                            )
+                        )
+                        .border(2.dp, ringColor, CircleShape)
+                        .clickable { onToggleProtection(!state.isProtectionEnabled) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = if (state.isProtectionEnabled) Icons.Rounded.Shield else Icons.Outlined.Shield,
+                            contentDescription = null,
+                            tint = ringColor,
+                            modifier = Modifier.size(42.dp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (state.isProtectionEnabled) (if (state.isArabic) "نَشِط" else "ON")
+                            else (if (state.isArabic) "متوقف" else "OFF"),
+                            color = SoftWhite,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Text(
+                    text = if (state.isProtectionEnabled) {
+                        if (state.isArabic) "أنت في كنف الحماية والرعاية" else "Digital Sanctuary Active"
+                    } else {
+                        if (state.isArabic) "اضغط على الدرع لتفعيل الحماية" else "Tap Shield to Activate"
+                    },
+                    color = SoftWhite,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                // شريط اختيار وضع الحماية المدمج (Segmented Pill)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.Black.copy(alpha = 0.35f))
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    ProtectionMode.entries.forEach { mode ->
+                        val selected = state.protectionMode == mode
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(50))
+                                .background(if (selected) AccentGold else Color.Transparent)
+                                .clickable { onSelectMode(mode) }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (state.isArabic) mode.titleAr else mode.titleEn,
+                                color = if (selected) DeepEmerald else SoftWhite.copy(alpha = 0.75f),
+                                fontSize = 11.sp,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+
+                Text(
+                    text = if (state.isArabic) state.protectionMode.descAr else state.protectionMode.descEn,
+                    color = SoftWhite.copy(alpha = 0.75f),
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 18.sp
+                )
+            }
+        }
+
+        // 2. زر "لحظة سَكينة" بتدرج ذهبي فاخر
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(AccentGold, Color(0xFFE6C65C))
+                    )
+                )
+                .clickable { onOpenRescue() }
+                .padding(horizontal = 20.dp, vertical = 16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(DeepEmerald.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Rounded.SelfImprovement, contentDescription = null, tint = DeepEmerald)
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = if (state.isArabic) "لحظة سَكينة" else "Moment of Serenity",
+                            color = DeepEmerald,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Text(
+                            text = if (state.isArabic) "آيات قرآنية وأدعية تهدئ القلب" else "Quranic verses & peace for your heart",
+                            color = DeepEmerald.copy(alpha = 0.8f),
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+                Icon(
+                    imageVector = if (state.isArabic) Icons.Rounded.ArrowBackIosNew else Icons.Rounded.ArrowForwardIos,
+                    contentDescription = null,
+                    tint = DeepEmerald,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+
+        // 3. بطاقة الذكر والآية اليومية بتصميم زجاجي أنيق
         Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = DeepEmerald),
-            border = BorderStroke(1.dp, statusColor.copy(alpha = 0.5f))
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            border = BorderStroke(1.dp, AccentGold.copy(alpha = 0.25f))
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Brush.horizontalGradient(listOf(DeepEmerald, EmeraldMedium)))
                     .padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -80,181 +237,24 @@ fun DashboardScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = if (state.isProtectionEnabled) Icons.Rounded.VerifiedUser else Icons.Rounded.GppMaybe,
-                            contentDescription = null,
-                            tint = statusColor,
-                            modifier = Modifier
-                                .size(38.dp)
-                                .scale(shieldScale)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = if (state.isProtectionEnabled) {
-                                    if (state.isArabic) "الحماية مُفعّلة" else "Protection Active"
-                                } else {
-                                    if (state.isArabic) "الحماية متوقفة" else "Protection Paused"
-                                },
-                                color = SoftWhite,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = if (state.isArabic) state.protectionMode.titleAr else state.protectionMode.titleEn,
-                                color = AccentGold,
-                                fontSize = 13.sp
-                            )
-                        }
-                    }
-
-                    Switch(
-                        checked = state.isProtectionEnabled,
-                        onCheckedChange = onToggleProtection,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = DeepEmerald,
-                            checkedTrackColor = AccentGold
-                        )
-                    )
-                }
-
-                Text(
-                    text = if (state.isArabic) state.protectionMode.descAr else state.protectionMode.descEn,
-                    color = SoftWhite.copy(alpha = 0.85f),
-                    fontSize = 12.sp,
-                    lineHeight = 18.sp
-                )
-            }
-        }
-
-        // 2. بطاقات التفعيل العصرية (2x2 Grid بدلاً من الأزرار التقليدية)
-        Text(
-            text = if (state.isArabic) "وحدات الحماية والتحكم" else "Protection Modules",
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            ModernControlTile(
-                modifier = Modifier.weight(1f),
-                title = if (state.isArabic) "درع المواقع (VPN)" else "Web Shield (VPN)",
-                statusText = if (state.permissions.vpnActive) (if (state.isArabic) "يعمل الآن" else "Active") else (if (state.isArabic) "اضغط للتشغيل" else "Tap to Start"),
-                icon = Icons.Rounded.VpnLock,
-                isActive = state.permissions.vpnActive,
-                onClick = onToggleVpn
-            )
-            ModernControlTile(
-                modifier = Modifier.weight(1f),
-                title = if (state.isArabic) "مراقب التطبيقات" else "App Monitor",
-                statusText = if (state.permissions.accessibilityGranted) (if (state.isArabic) "مُفعّل" else "Enabled") else (if (state.isArabic) "يتطلب تفعيل" else "Needs Setup"),
-                icon = Icons.Rounded.AccessibilityNew,
-                isActive = state.permissions.accessibilityGranted,
-                onClick = onRequestAccessibilityPerm
-            )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            ModernControlTile(
-                modifier = Modifier.weight(1f),
-                title = if (state.isArabic) "تتبع الاستخدام" else "Usage Access",
-                statusText = if (state.permissions.usageStatsGranted) (if (state.isArabic) "مُصرّح به" else "Granted") else (if (state.isArabic) "اضغط للسماح" else "Tap to Grant"),
-                icon = Icons.Rounded.DataUsage,
-                isActive = state.permissions.usageStatsGranted,
-                onClick = onRequestUsageStatsPerm
-            )
-            ModernControlTile(
-                modifier = Modifier.weight(1f),
-                title = if (state.isArabic) "تذكيرات 5 ثوانٍ" else "5s Reminders",
-                statusText = if (state.permissions.notificationsGranted) (if (state.isArabic) "مُفعّلة" else "Ready") else (if (state.isArabic) "تفعيل الإشعار" else "Allow Alerts"),
-                icon = Icons.Rounded.NotificationsActive,
-                isActive = state.permissions.notificationsGranted,
-                onClick = onRequestNotificationPerm
-            )
-        }
-
-        // 3. زر "لحظة سَكينة" المطور
-        Button(
-            onClick = onOpenRescue,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = AccentGold)
-        ) {
-            Icon(Icons.Rounded.SelfImprovement, contentDescription = null, tint = DeepEmerald)
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                text = if (state.isArabic) "لحظة سَكينة — آيات وطمأنينة للقلب" else "Moment of Serenity — Peace & Verses",
-                color = DeepEmerald,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        // 4. مستويات الحماية
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            ProtectionMode.entries.forEach { mode ->
-                FilterChip(
-                    selected = state.protectionMode == mode,
-                    onClick = { onSelectMode(mode) },
-                    modifier = Modifier.weight(1f),
-                    label = {
+                        Icon(Icons.Rounded.AutoAwesome, contentDescription = null, tint = AccentGold, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (state.isArabic) mode.titleAr else mode.titleEn,
-                            fontSize = 11.sp,
-                            maxLines = 1,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
+                            text = if (state.isArabic) "إشراقة إيمانية" else "Daily Reflection",
+                            color = AccentGold,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
                         )
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = DeepEmerald,
-                        selectedLabelColor = AccentGold
-                    )
-                )
-            }
-        }
-
-        // 5. بطاقة الذكر والآية اليومية
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (state.isArabic) "تذكير إيماني" else "Islamic Reminder",
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
+                    }
                     IconButton(onClick = onNextReminder, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Rounded.Refresh, contentDescription = "Next", tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Rounded.Refresh, contentDescription = "Next", tint = AccentGold, modifier = Modifier.size(18.dp))
                     }
                 }
                 Text(
                     text = if (state.isArabic) state.currentReminder.textAr else state.currentReminder.textEn,
-                    fontSize = 15.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
-                    lineHeight = 24.sp
+                    lineHeight = 26.sp
                 )
                 Text(
                     text = if (state.isArabic) state.currentReminder.sourceAr else state.currentReminder.sourceEn,
@@ -264,16 +264,67 @@ fun DashboardScreen(
             }
         }
 
-        // 6. الوصول السريع
+        // 4. وحدات التحكم والأذونات الذكية (2x2 Glass Grid)
+        Text(
+            text = if (state.isArabic) "وحدات الوقاية الذكية" else "Smart Guard Modules",
+            fontWeight = FontWeight.Bold,
+            fontSize = 15.sp
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            ModernControlTile(
+                modifier = Modifier.weight(1f),
+                title = if (state.isArabic) "درع التصفح (VPN)" else "Safe DNS (VPN)",
+                statusText = if (state.permissions.vpnActive) (if (state.isArabic) "سريع ونشط" else "Fast & Active") else (if (state.isArabic) "اضغط للتفعيل" else "Tap to Start"),
+                icon = Icons.Rounded.VpnLock,
+                isActive = state.permissions.vpnActive,
+                onClick = onToggleVpn
+            )
+            ModernControlTile(
+                modifier = Modifier.weight(1f),
+                title = if (state.isArabic) "مراقب التطبيقات" else "App Monitor",
+                statusText = if (state.permissions.accessibilityGranted) (if (state.isArabic) "مُفعّل" else "Enabled") else (if (state.isArabic) "تفعيل الخدمة" else "Enable Service"),
+                icon = Icons.Rounded.AccessibilityNew,
+                isActive = state.permissions.accessibilityGranted,
+                onClick = onRequestAccessibilityPerm
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            ModernControlTile(
+                modifier = Modifier.weight(1f),
+                title = if (state.isArabic) "تتبع الاستخدام" else "Usage Access",
+                statusText = if (state.permissions.usageStatsGranted) (if (state.isArabic) "مُصرّح به" else "Granted") else (if (state.isArabic) "منح الإذن" else "Grant Access"),
+                icon = Icons.Rounded.DataUsage,
+                isActive = state.permissions.usageStatsGranted,
+                onClick = onRequestUsageStatsPerm
+            )
+            ModernControlTile(
+                modifier = Modifier.weight(1f),
+                title = if (state.isArabic) "تنبيهات 5 ثوانٍ" else "5s Reminders",
+                statusText = if (state.permissions.notificationsGranted) (if (state.isArabic) "جاهزة" else "Ready") else (if (state.isArabic) "تفعيل الإشعار" else "Allow Alerts"),
+                icon = Icons.Rounded.NotificationsActive,
+                isActive = state.permissions.notificationsGranted,
+                onClick = onRequestNotificationPerm
+            )
+        }
+
+        // 5. بطاقات الوصول السريع
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             QuickAccessCard(
                 modifier = Modifier.weight(1f),
-                title = if (state.isArabic) "درع المواقع" else "Sites Shield",
-                subtitle = if (state.isArabic) "مُفعّل (+45,000)" else "Active (+45,000)",
-                icon = Icons.Rounded.Language,
+                title = if (state.isArabic) "حفظ البصر" else "Gaze Shield",
+                subtitle = if (state.isArabic) "+45,000 نطاق محمي" else "+45,000 Protected",
+                icon = Icons.Rounded.VisibilityOff,
                 onClick = onNavigateWebsites
             )
             QuickAccessCard(
@@ -284,6 +335,8 @@ fun DashboardScreen(
                 onClick = onNavigateApps
             )
         }
+
+        Spacer(modifier = Modifier.height(76.dp))
     }
 }
 
@@ -301,36 +354,44 @@ private fun ModernControlTile(
         label = "tileBg"
     )
     val borderColor by animateColorAsState(
-        targetValue = if (isActive) AccentGold else Color.Gray.copy(alpha = 0.25f),
+        targetValue = if (isActive) AccentGold else Color.Gray.copy(alpha = 0.2f),
         label = "tileBorder"
     )
 
     Card(
         modifier = modifier.clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = bgColor),
-        border = BorderStroke(1.2.dp, borderColor)
+        border = BorderStroke(1.dp, borderColor)
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            modifier = Modifier.padding(15.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = if (isActive) AccentGold else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp)
-                )
-                Icon(
-                    imageVector = if (isActive) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
-                    contentDescription = null,
-                    tint = if (isActive) AccentGold else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp)
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(if (isActive) AccentGold.copy(alpha = 0.15f) else Color.Gray.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = if (isActive) AccentGold else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(if (isActive) AccentGold else Color.Gray.copy(alpha = 0.4f))
                 )
             }
             Text(
@@ -358,8 +419,9 @@ private fun QuickAccessCard(
 ) {
     Card(
         modifier = modifier.clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        border = BorderStroke(1.dp, AccentGold.copy(alpha = 0.2f))
     ) {
         Row(
             modifier = Modifier.padding(14.dp),
@@ -368,12 +430,12 @@ private fun QuickAccessCard(
         ) {
             Icon(imageVector = icon, contentDescription = null, tint = AccentGold)
             Column {
-                Text(text = title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Text(text = title, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 Text(
                     text = subtitle,
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Medium
                 )
             }
         }
