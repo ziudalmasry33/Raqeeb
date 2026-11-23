@@ -215,7 +215,7 @@ fun AzkarQuranScreen(isArabic: Boolean) {
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (isArabic) "استلهم آية جديدة" else "Inspire Another Verse",
+                            text = if (isArabic) "رسائل من القرآن" else "Messages from Quran",
                             color = DeepEmerald,
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 14.sp
