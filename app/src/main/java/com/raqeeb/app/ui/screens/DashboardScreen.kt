@@ -20,6 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -125,63 +127,70 @@ fun DashboardScreen(
             }
         }
 
-        // 2. مركز تفعيل الأذونات الفعلية (الإشعارات، الوصول، الاستخدام، VPN)
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            border = BorderStroke(1.dp, AccentGold.copy(alpha = 0.35f))
-        ) {
-            Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = if (state.isArabic) "أذونات الحماية والتحكم الفعلي" else "Active Control Permissions",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
+        // 2. بطاقات التفعيل العصرية (2x2 Grid بدلاً من الأزرار التقليدية)
+        Text(
+            text = if (state.isArabic) "وحدات الحماية والتحكم" else "Protection Modules",
+            fontWeight = FontWeight.Bold,
+            fontSize = 15.sp
+        )
 
-                PermissionRow(
-                    title = if (state.isArabic) "إذن الإشعارات والتذكيرات" else "Notifications Permission",
-                    granted = state.permissions.notificationsGranted,
-                    isArabic = state.isArabic,
-                    onClick = onRequestNotificationPerm
-                )
-                PermissionRow(
-                    title = if (state.isArabic) "خدمة إمكانية الوصول (مراقبة التطبيقات)" else "Accessibility Service",
-                    granted = state.permissions.accessibilityGranted,
-                    isArabic = state.isArabic,
-                    onClick = onRequestAccessibilityPerm
-                )
-                PermissionRow(
-                    title = if (state.isArabic) "إحصائيات الاستخدام (جلب التطبيقات)" else "Usage Access Permission",
-                    granted = state.permissions.usageStatsGranted,
-                    isArabic = state.isArabic,
-                    onClick = onRequestUsageStatsPerm
-                )
-                PermissionRow(
-                    title = if (state.isArabic) "درع حظر المواقع الإباحية (VPN محلي)" else "Adult Sites Blocker (Local VPN)",
-                    granted = state.permissions.vpnActive,
-                    isArabic = state.isArabic,
-                    onClick = onToggleVpn
-                )
-            }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            ModernControlTile(
+                modifier = Modifier.weight(1f),
+                title = if (state.isArabic) "درع المواقع (VPN)" else "Web Shield (VPN)",
+                statusText = if (state.permissions.vpnActive) (if (state.isArabic) "يعمل الآن" else "Active") else (if (state.isArabic) "اضغط للتشغيل" else "Tap to Start"),
+                icon = Icons.Rounded.VpnLock,
+                isActive = state.permissions.vpnActive,
+                onClick = onToggleVpn
+            )
+            ModernControlTile(
+                modifier = Modifier.weight(1f),
+                title = if (state.isArabic) "مراقب التطبيقات" else "App Monitor",
+                statusText = if (state.permissions.accessibilityGranted) (if (state.isArabic) "مُفعّل" else "Enabled") else (if (state.isArabic) "يتطلب تفعيل" else "Needs Setup"),
+                icon = Icons.Rounded.AccessibilityNew,
+                isActive = state.permissions.accessibilityGranted,
+                onClick = onRequestAccessibilityPerm
+            )
         }
 
-        // 3. زر الطوارئ الذكي "أنقذني"
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            ModernControlTile(
+                modifier = Modifier.weight(1f),
+                title = if (state.isArabic) "تتبع الاستخدام" else "Usage Access",
+                statusText = if (state.permissions.usageStatsGranted) (if (state.isArabic) "مُصرّح به" else "Granted") else (if (state.isArabic) "اضغط للسماح" else "Tap to Grant"),
+                icon = Icons.Rounded.DataUsage,
+                isActive = state.permissions.usageStatsGranted,
+                onClick = onRequestUsageStatsPerm
+            )
+            ModernControlTile(
+                modifier = Modifier.weight(1f),
+                title = if (state.isArabic) "تذكيرات 5 ثوانٍ" else "5s Reminders",
+                statusText = if (state.permissions.notificationsGranted) (if (state.isArabic) "مُفعّلة" else "Ready") else (if (state.isArabic) "تفعيل الإشعار" else "Allow Alerts"),
+                icon = Icons.Rounded.NotificationsActive,
+                isActive = state.permissions.notificationsGranted,
+                onClick = onRequestNotificationPerm
+            )
+        }
+
+        // 3. زر "لحظة سَكينة" المطور
         Button(
             onClick = onOpenRescue,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(54.dp),
+                .height(56.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = AccentGold)
         ) {
-            Icon(Icons.Rounded.VolunteerActivism, contentDescription = null, tint = DeepEmerald)
+            Icon(Icons.Rounded.SelfImprovement, contentDescription = null, tint = DeepEmerald)
             Spacer(modifier = Modifier.width(10.dp))
             Text(
-                text = if (state.isArabic) "أنقذني — تدخل إيماني فوري" else "Rescue Me — Instant Support",
+                text = if (state.isArabic) "لحظة سَكينة — آيات وطمأنينة للقلب" else "Moment of Serenity — Peace & Verses",
                 color = DeepEmerald,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold
@@ -279,35 +288,63 @@ fun DashboardScreen(
 }
 
 @Composable
-private fun PermissionRow(
+private fun ModernControlTile(
+    modifier: Modifier = Modifier,
     title: String,
-    granted: Boolean,
-    isArabic: Boolean,
+    statusText: String,
+    icon: ImageVector,
+    isActive: Boolean,
     onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    val bgColor by animateColorAsState(
+        targetValue = if (isActive) DeepEmerald else MaterialTheme.colorScheme.surfaceVariant,
+        label = "tileBg"
+    )
+    val borderColor by animateColorAsState(
+        targetValue = if (isActive) AccentGold else Color.Gray.copy(alpha = 0.25f),
+        label = "tileBorder"
+    )
+
+    Card(
+        modifier = modifier.clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = bgColor),
+        border = BorderStroke(1.2.dp, borderColor)
     ) {
-        Text(text = title, fontSize = 13.sp, modifier = Modifier.weight(1f))
-        AssistChip(
-            onClick = onClick,
-            label = {
-                Text(
-                    text = if (granted) (if (isArabic) "مُفعّل ✓" else "Active ✓")
-                    else (if (isArabic) "تفعيل الآن" else "Enable"),
-                    fontSize = 11.sp
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isActive) AccentGold else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp)
                 )
-            },
-            colors = AssistChipDefaults.assistChipColors(
-                containerColor = if (granted) DeepEmerald else AlertRed.copy(alpha = 0.2f),
-                labelColor = if (granted) AccentGold else AlertRed
+                Icon(
+                    imageVector = if (isActive) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                    contentDescription = null,
+                    tint = if (isActive) AccentGold else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Text(
+                text = title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isActive) SoftWhite else MaterialTheme.colorScheme.onSurface
             )
-        )
+            Text(
+                text = statusText,
+                fontSize = 11.sp,
+                color = if (isActive) AccentGold else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -316,7 +353,7 @@ private fun QuickAccessCard(
     modifier: Modifier = Modifier,
     title: String,
     subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     onClick: () -> Unit
 ) {
     Card(

@@ -14,6 +14,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -26,6 +27,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -48,11 +50,12 @@ class MainActivity : ComponentActivity() {
             val viewModel: MainViewModel = viewModel()
             val state by viewModel.uiState.collectAsState()
             var selectedTab by remember { mutableIntStateOf(0) }
+            var showFirstLaunchUsagePrompt by remember { mutableStateOf(false) }
 
             val notificationLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.RequestPermission()
             ) { granted ->
-                viewModel.refreshSystemState(context)
+                viewModel.refreshSystemState(context, RaqeebVpnService.isRunning)
                 if (granted) {
                     PermissionHelper.sendReminderNotification(
                         context,
@@ -66,15 +69,27 @@ class MainActivity : ComponentActivity() {
                 ActivityResultContracts.StartActivityForResult()
             ) { result ->
                 if (result.resultCode == Activity.RESULT_OK) {
-                    context.startService(Intent(context, RaqeebVpnService::class.java))
+                    val vpnIntent = Intent(context, RaqeebVpnService::class.java)
+                    ContextCompat.startForegroundService(context, vpnIntent)
                     viewModel.setVpnActive(true)
+                }
+            }
+
+            // فحص الصلاحيات عند أول تشغيل وعند العودة للتطبيق
+            LaunchedEffect(Unit) {
+                viewModel.refreshSystemState(context, RaqeebVpnService.isRunning)
+                if (!PermissionHelper.hasUsageStatsPermission(context)) {
+                    showFirstLaunchUsagePrompt = true
                 }
             }
 
             DisposableEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_RESUME) {
-                        viewModel.refreshSystemState(context)
+                        viewModel.refreshSystemState(context, RaqeebVpnService.isRunning)
+                        if (PermissionHelper.hasUsageStatsPermission(context)) {
+                            showFirstLaunchUsagePrompt = false
+                        }
                     }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
@@ -175,7 +190,7 @@ class MainActivity : ComponentActivity() {
                                             PermissionHelper.openUsageAccessSettings(context)
                                         },
                                         onToggleVpn = {
-                                            if (state.permissions.vpnActive) {
+                                            if (state.permissions.vpnActive || RaqeebVpnService.isRunning) {
                                                 context.startService(Intent(context, RaqeebVpnService::class.java).apply {
                                                     action = "STOP_VPN"
                                                 })
@@ -185,7 +200,8 @@ class MainActivity : ComponentActivity() {
                                                 if (vpnIntent != null) {
                                                     vpnLauncher.launch(vpnIntent)
                                                 } else {
-                                                    context.startService(Intent(context, RaqeebVpnService::class.java))
+                                                    val startIntent = Intent(context, RaqeebVpnService::class.java)
+                                                    ContextCompat.startForegroundService(context, startIntent)
                                                     viewModel.setVpnActive(true)
                                                 }
                                             }
@@ -212,6 +228,45 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             }
+                        }
+
+                        // نافذة طلب صلاحية تتبع الاستخدام عند أول فتح للتطبيق
+                        if (showFirstLaunchUsagePrompt) {
+                            AlertDialog(
+                                onDismissRequest = { showFirstLaunchUsagePrompt = false },
+                                icon = { Icon(Icons.Rounded.DataUsage, contentDescription = null, tint = AccentGold) },
+                                title = {
+                                    Text(
+                                        text = if (state.isArabic) "تفعيل صلاحية تتبع الاستخدام" else "Enable Usage Access",
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                },
+                                text = {
+                                    Text(
+                                        text = if (state.isArabic)
+                                            "يحتاج تطبيق رقيب لصلاحية الوصول إلى بيانات الاستخدام للتعرف على التطبيقات المثبتة وتذكيرك بعد 5 ثوانٍ من فتح أي تطبيق مقيد. تبقى جميع بياناتك على جهازك فقط."
+                                        else
+                                            "RAQEEB needs Usage Access permission to detect installed apps and remind you 5 seconds after opening a restricted app. All data stays strictly on your device."
+                                    )
+                                },
+                                confirmButton = {
+                                    Button(
+                                        onClick = {
+                                            showFirstLaunchUsagePrompt = false
+                                            PermissionHelper.openUsageAccessSettings(context)
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = DeepEmerald),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text(if (state.isArabic) "منح الصلاحية الآن" else "Grant Now", color = AccentGold)
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showFirstLaunchUsagePrompt = false }) {
+                                        Text(if (state.isArabic) "لاحقاً" else "Later")
+                                    }
+                                }
+                            )
                         }
 
                         if (state.showRescueDialog) {
