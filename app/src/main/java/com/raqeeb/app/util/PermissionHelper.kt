@@ -23,6 +23,21 @@ import com.raqeeb.app.service.RaqeebAccessibilityService
 object PermissionHelper {
     const val CHANNEL_ID = "raqeeb_reminders_channel"
 
+    private val defaultSocialPackages = setOf(
+        "com.whatsapp",
+        "com.whatsapp.w4b",
+        "com.facebook.katana",
+        "com.facebook.lite",
+        "com.facebook.orca",
+        "com.instagram.android",
+        "com.zhiliaoapp.musically",
+        "com.ss.android.ugc.trill",
+        "org.telegram.messenger",
+        "com.snapchat.android",
+        "com.twitter.android",
+        "com.google.android.youtube"
+    )
+
     fun hasNotificationPermission(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
@@ -75,7 +90,7 @@ object PermissionHelper {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "تذكيرات رقيب الإيمانية",
+                "إشعارات وتذكيرات رقيب",
                 NotificationManager.IMPORTANCE_HIGH
             )
             manager.createNotificationChannel(channel)
@@ -99,12 +114,16 @@ object PermissionHelper {
         return packages
             .filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 && it.packageName != context.packageName }
             .map { appInfo ->
+                val isSocial = defaultSocialPackages.contains(appInfo.packageName)
+                if (isSocial) {
+                    RaqeebAccessibilityService.restrictedPackages.add(appInfo.packageName)
+                }
                 RestrictedApp(
                     packageName = appInfo.packageName,
                     appName = pm.getApplicationLabel(appInfo).toString(),
-                    isRestricted = false
+                    isRestricted = isSocial
                 )
             }
-            .sortedBy { it.appName.lowercase() }
+            .sortedWith(compareByDescending<RestrictedApp> { it.isRestricted }.thenBy { it.appName.lowercase() })
     }
 }

@@ -9,6 +9,7 @@ import com.raqeeb.app.service.RaqeebAccessibilityService
 import com.raqeeb.app.service.RaqeebVpnService
 import com.raqeeb.app.util.PermissionHelper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -63,6 +64,12 @@ val defaultReminders = listOf(
         textEn = "\"Unquestionably, by the remembrance of Allah hearts are assured.\"",
         sourceAr = "سورة الرعد - آية 28",
         sourceEn = "Surah Ar-Ra'd, Verse 28"
+    ),
+    IslamicReminder(
+        textAr = "﴿ وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا ﴾",
+        textEn = "\"And whoever fears Allah - He will make for him a way out.\"",
+        sourceAr = "سورة الطلاق - آية 2",
+        sourceEn = "Surah At-Talaq, Verse 2"
     )
 )
 
@@ -81,30 +88,11 @@ val defaultChallenges = listOf(
 class MainViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(RaqeebUiState())
     val uiState: StateFlow<RaqeebUiState> = _uiState.asStateFlow()
-    private var lastNotifiedMessageId: Long = -1L
+    private var pollingStarted = false
 
-    fun refreshSystemState(context: Context, isVpnRunning: Boolean = RaqeebVpnService.isRunning) {
+    fun initializeApp(context: Context) {
         val appContext = context.applicationContext
-        val prefs = appContext.getSharedPreferences("raqeeb_sync", Context.MODE_PRIVATE)
-        val savedUrl = prefs.getString("sb_url", "") ?: ""
-        val savedKey = prefs.getString("sb_key", "") ?: ""
-        if (savedUrl.isNotBlank() && savedKey.isNotBlank()) {
-            SupabaseSyncClient.supabaseUrl = savedUrl
-            SupabaseSyncClient.supabaseAnonKey = savedKey
-        }
-
-        _uiState.update { state ->
-            state.copy(
-                permissions = PermissionStatus(
-                    notificationsGranted = PermissionHelper.hasNotificationPermission(appContext),
-                    accessibilityGranted = PermissionHelper.isAccessibilityEnabled(appContext),
-                    usageStatsGranted = PermissionHelper.hasUsageStatsPermission(appContext),
-                    vpnActive = isVpnRunning
-                )
-            )
-        }
-
-        syncFromAdminCloud(appContext)
+        refreshPermissionsOnly(appContext)
 
         if (_uiState.value.apps.isEmpty() && !_uiState.value.isLoadingApps) {
             _uiState.update { it.copy(isLoadingApps = true) }
@@ -115,46 +103,53 @@ class MainViewModel : ViewModel() {
                 _uiState.update { it.copy(apps = installed, isLoadingApps = false) }
             }
         }
-    }
 
-    fun configureCloudSync(context: Context, url: String, anonKey: String) {
-        val cleanUrl = url.trim()
-        val cleanKey = anonKey.trim()
-        context.getSharedPreferences("raqeeb_sync", Context.MODE_PRIVATE).edit()
-            .putString("sb_url", cleanUrl)
-            .putString("sb_key", cleanKey)
-            .apply()
-        SupabaseSyncClient.supabaseUrl = cleanUrl
-        SupabaseSyncClient.supabaseAnonKey = cleanKey
-        syncFromAdminCloud(context.applicationContext)
-    }
-
-    fun syncFromAdminCloud(context: Context) {
-        viewModelScope.launch {
-            val msg = SupabaseSyncClient.fetchLatestAdminMessage()
-            if (msg != null && msg.body.isNotBlank()) {
-                _uiState.update { it.copy(latestAdminMessage = msg) }
-                if (msg.id != lastNotifiedMessageId) {
-                    lastNotifiedMessageId = msg.id
-                    PermissionHelper.sendReminderNotification(context, msg.title, msg.body)
+        if (!pollingStarted) {
+            pollingStarted = true
+            // جلب الرسائل الفورية والتذكيرات من الخلفية بشكل دوري صامت
+            viewModelScope.launch {
+                while (true) {
+                    syncFromCloudSilently(appContext)
+                    delay(12_000L)
                 }
             }
+        }
+    }
 
-            val remoteReminders = SupabaseSyncClient.fetchPublishedReminders()
-            if (remoteReminders.isNotEmpty()) {
-                val combined = remoteReminders + defaultReminders
-                _uiState.update {
-                    it.copy(
-                        remindersList = combined,
-                        currentReminder = combined.first()
-                    )
-                }
-            }
+    fun refreshPermissionsOnly(context: Context, isVpnRunning: Boolean = RaqeebVpnService.isRunning) {
+        _uiState.update { state ->
+            state.copy(
+                permissions = PermissionStatus(
+                    notificationsGranted = PermissionHelper.hasNotificationPermission(context),
+                    accessibilityGranted = PermissionHelper.isAccessibilityEnabled(context),
+                    usageStatsGranted = PermissionHelper.hasUsageStatsPermission(context),
+                    vpnActive = isVpnRunning
+                )
+            )
+        }
+    }
 
-            val remoteDomains = SupabaseSyncClient.fetchRemoteBlockedDomains()
-            if (remoteDomains.isNotEmpty()) {
-                RaqeebVpnService.customBlockedDomains.addAll(remoteDomains)
+    private suspend fun syncFromCloudSilently(context: Context) {
+        val msg = SupabaseSyncClient.fetchLatestAdminMessage()
+        if (msg != null && msg.body.isNotBlank()) {
+            _uiState.update { it.copy(latestAdminMessage = msg) }
+            val prefs = context.getSharedPreferences("raqeeb_prefs", Context.MODE_PRIVATE)
+            val lastSeenId = prefs.getLong("last_admin_msg_id", -1L)
+            if (msg.id > lastSeenId) {
+                prefs.edit().putLong("last_admin_msg_id", msg.id).apply()
+                PermissionHelper.sendReminderNotification(context, msg.title, msg.body)
             }
+        }
+
+        val remoteReminders = SupabaseSyncClient.fetchPublishedReminders()
+        if (remoteReminders.isNotEmpty()) {
+            val combined = remoteReminders + defaultReminders
+            _uiState.update { it.copy(remindersList = combined) }
+        }
+
+        val remoteDomains = SupabaseSyncClient.fetchRemoteBlockedDomains()
+        if (remoteDomains.isNotEmpty()) {
+            RaqeebVpnService.customBlockedDomains.addAll(remoteDomains)
         }
     }
 
@@ -187,8 +182,9 @@ class MainViewModel : ViewModel() {
     fun nextReminder() {
         _uiState.update { state ->
             val list = state.remindersList
+            if (list.isEmpty()) return@update state
             val currentIndex = list.indexOf(state.currentReminder)
-            val nextIndex = (currentIndex + 1) % list.size
+            val nextIndex = if (currentIndex == -1) 0 else (currentIndex + 1) % list.size
             state.copy(currentReminder = list[nextIndex])
         }
     }

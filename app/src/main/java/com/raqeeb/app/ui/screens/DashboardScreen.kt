@@ -1,9 +1,11 @@
 package com.raqeeb.app.ui.screens
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,14 +16,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.raqeeb.app.domain.model.ProtectionMode
 import com.raqeeb.app.ui.theme.*
 import com.raqeeb.app.ui.viewmodel.RaqeebUiState
+import kotlinx.coroutines.delay
 
 @Composable
 fun DashboardScreen(
@@ -46,19 +48,19 @@ fun DashboardScreen(
     onToggleVpn: () -> Unit,
     onNavigateWebsites: () -> Unit,
     onNavigateApps: () -> Unit,
-    onDismissAdminMsg: () -> Unit = {},
-    onSyncCloud: () -> Unit = {},
-    onSaveCloudKeys: (String, String) -> Unit = { _, _ -> }
+    onDismissAdminMsg: () -> Unit = {}
 ) {
-    var showCloudDialog by remember { mutableStateOf(false) }
+    // تحديث تلقائي للذكر والآية كل 10 ثوانٍ بدون أي ضغط من المستخدم
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(10_000L)
+            onNextReminder()
+        }
+    }
 
-    val orbScale by animateFloatAsState(
-        targetValue = if (state.isProtectionEnabled) 1f else 0.94f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "orbScale"
-    )
     val ringColor by animateColorAsState(
         targetValue = if (state.isProtectionEnabled) AccentGold else AlertRed,
+        animationSpec = tween(250),
         label = "ringColor"
     )
 
@@ -69,7 +71,7 @@ fun DashboardScreen(
             .padding(horizontal = 18.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 0. بطاقة رسالة الإدارة الفورية (تظهر فور وصول رسالة من لوحة الأدمن)
+        // 0. بطاقة رسالة الإدارة الفورية (تظهر تلقائياً عند إرسال رسالة من لوحة الأدمن)
         state.latestAdminMessage?.let { adminMsg ->
             Card(
                 shape = RoundedCornerShape(20.dp),
@@ -127,8 +129,7 @@ fun DashboardScreen(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(116.dp)
-                        .scale(orbScale)
+                        .size(112.dp)
                         .clip(CircleShape)
                         .background(Brush.radialGradient(listOf(ringColor.copy(alpha = 0.25f), Color.Transparent)))
                         .border(2.dp, ringColor, CircleShape)
@@ -140,7 +141,7 @@ fun DashboardScreen(
                             imageVector = if (state.isProtectionEnabled) Icons.Rounded.Shield else Icons.Outlined.Shield,
                             contentDescription = null,
                             tint = ringColor,
-                            modifier = Modifier.size(42.dp)
+                            modifier = Modifier.size(40.dp)
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -252,7 +253,7 @@ fun DashboardScreen(
             }
         }
 
-        // 3. بطاقة الإشراقة الإيمانية + زر المزامنة مع لوحة الإدارة
+        // 3. بطاقة الإشراقة الإيمانية (تتبدل تلقائياً كل 10 ثوانٍ بانسيابية ناعمة)
         Card(
             shape = RoundedCornerShape(22.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -273,32 +274,33 @@ fun DashboardScreen(
                         Icon(Icons.Rounded.AutoAwesome, contentDescription = null, tint = AccentGold, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (state.isArabic) "إشراقة إيمانية" else "Daily Reflection",
+                            text = if (state.isArabic) "إشراقة إيمانية (تتجدد تلقائياً)" else "Auto-Refreshing Reflection",
                             color = AccentGold,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
+                            fontSize = 12.sp
                         )
                     }
-                    Row {
-                        IconButton(onClick = { showCloudDialog = true }, modifier = Modifier.size(28.dp)) {
-                            Icon(Icons.Rounded.CloudSync, contentDescription = "Cloud Sync", tint = AccentGold, modifier = Modifier.size(18.dp))
-                        }
-                        IconButton(onClick = onNextReminder, modifier = Modifier.size(28.dp)) {
-                            Icon(Icons.Rounded.Refresh, contentDescription = "Next", tint = AccentGold, modifier = Modifier.size(18.dp))
-                        }
+                }
+
+                AnimatedContent(
+                    targetState = state.currentReminder,
+                    transitionSpec = { fadeIn(tween(350)) togetherWith fadeOut(tween(250)) },
+                    label = "reminderFade"
+                ) { reminder ->
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = if (state.isArabic) reminder.textAr else reminder.textEn,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            lineHeight = 26.sp
+                        )
+                        Text(
+                            text = if (state.isArabic) reminder.sourceAr else reminder.sourceEn,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
-                Text(
-                    text = if (state.isArabic) state.currentReminder.textAr else state.currentReminder.textEn,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    lineHeight = 26.sp
-                )
-                Text(
-                    text = if (state.isArabic) state.currentReminder.sourceAr else state.currentReminder.sourceEn,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
 
@@ -323,8 +325,8 @@ fun DashboardScreen(
             )
             ModernControlTile(
                 modifier = Modifier.weight(1f),
-                title = if (state.isArabic) "مراقب التطبيقات" else "App Monitor",
-                statusText = if (state.permissions.accessibilityGranted) (if (state.isArabic) "مُفعّل" else "Enabled") else (if (state.isArabic) "تفعيل الخدمة" else "Enable Service"),
+                title = if (state.isArabic) "مراقب التواصل" else "Social Guard",
+                statusText = if (state.permissions.accessibilityGranted) (if (state.isArabic) "مُفعّل تلقائياً" else "Auto-Active") else (if (state.isArabic) "تفعيل الخدمة" else "Enable Service"),
                 icon = Icons.Rounded.AccessibilityNew,
                 isActive = state.permissions.accessibilityGranted,
                 onClick = onRequestAccessibilityPerm
@@ -346,7 +348,7 @@ fun DashboardScreen(
             ModernControlTile(
                 modifier = Modifier.weight(1f),
                 title = if (state.isArabic) "تنبيهات 5 ثوانٍ" else "5s Reminders",
-                statusText = if (state.permissions.notificationsGranted) (if (state.isArabic) "جاهزة" else "Ready") else (if (state.isArabic) "تفعيل الإشعار" else "Allow Alerts"),
+                statusText = if (state.permissions.notificationsGranted) (if (state.isArabic) "إشعار + Toast" else "Alert + Toast") else (if (state.isArabic) "تفعيل الإشعار" else "Allow Alerts"),
                 icon = Icons.Rounded.NotificationsActive,
                 isActive = state.permissions.notificationsGranted,
                 onClick = onRequestNotificationPerm
@@ -354,46 +356,6 @@ fun DashboardScreen(
         }
 
         Spacer(modifier = Modifier.height(76.dp))
-    }
-
-    if (showCloudDialog) {
-        var urlInput by remember { mutableStateOf("") }
-        var keyInput by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showCloudDialog = false },
-            title = { Text(if (state.isArabic) "ربط استقبال رسائل الأدمن" else "Connect Admin Broadcasts", fontWeight = FontWeight.Bold) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        text = if (state.isArabic) "أدخل بيانات مشروع Supabase لاستقبال رسائل وتذكيرات لوحة الإدارة فوراً:"
-                        else "Enter Supabase credentials to receive admin broadcasts:",
-                        fontSize = 12.sp
-                    )
-                    OutlinedTextField(value = urlInput, onValueChange = { urlInput = it }, label = { Text("Project URL") }, singleLine = true)
-                    OutlinedTextField(value = keyInput, onValueChange = { keyInput = it }, label = { Text("Anon Public Key") }, singleLine = true)
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (urlInput.isNotBlank() && keyInput.isNotBlank()) {
-                            onSaveCloudKeys(urlInput, keyInput)
-                        } else {
-                            onSyncCloud()
-                        }
-                        showCloudDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = DeepEmerald)
-                ) {
-                    Text(if (state.isArabic) "حفظ وتحديث الآن" else "Save & Sync", color = AccentGold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCloudDialog = false }) {
-                    Text(if (state.isArabic) "إغلاق" else "Close")
-                }
-            }
-        )
     }
 }
 
@@ -408,10 +370,12 @@ private fun ModernControlTile(
 ) {
     val bgColor by animateColorAsState(
         targetValue = if (isActive) DeepEmerald else MaterialTheme.colorScheme.surfaceVariant,
+        animationSpec = tween(220),
         label = "tileBg"
     )
     val borderColor by animateColorAsState(
         targetValue = if (isActive) AccentGold else Color.Gray.copy(alpha = 0.2f),
+        animationSpec = tween(220),
         label = "tileBorder"
     )
 

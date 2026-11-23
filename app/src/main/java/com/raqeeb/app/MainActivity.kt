@@ -9,13 +9,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -67,7 +62,7 @@ class MainActivity : ComponentActivity() {
             val notificationLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.RequestPermission()
             ) { granted ->
-                viewModel.refreshSystemState(context, RaqeebVpnService.isRunning)
+                viewModel.refreshPermissionsOnly(context)
                 if (granted) {
                     PermissionHelper.sendReminderNotification(
                         context,
@@ -88,7 +83,7 @@ class MainActivity : ComponentActivity() {
             }
 
             LaunchedEffect(Unit) {
-                viewModel.refreshSystemState(context, RaqeebVpnService.isRunning)
+                viewModel.initializeApp(context)
                 if (!PermissionHelper.hasUsageStatsPermission(context)) {
                     showFirstLaunchUsagePrompt = true
                 }
@@ -97,7 +92,7 @@ class MainActivity : ComponentActivity() {
             DisposableEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_RESUME) {
-                        viewModel.refreshSystemState(context, RaqeebVpnService.isRunning)
+                        viewModel.refreshPermissionsOnly(context, RaqeebVpnService.isRunning)
                         if (PermissionHelper.hasUsageStatsPermission(context)) {
                             showFirstLaunchUsagePrompt = false
                         }
@@ -162,10 +157,11 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .padding(innerPadding)
                         ) {
-                            AnimatedContent(
+                            // انتقال Crossfade ناعم وخفيف 180ms بدون أي تهنيج
+                            Crossfade(
                                 targetState = selectedTab,
-                                transitionSpec = { (slideInHorizontally(animationSpec = tween(260)) { if (targetState > initialState) it / 4 else -it / 4 } + fadeIn(tween(260))) togetherWith (slideOutHorizontally(animationSpec = tween(220)) { if (targetState > initialState) -it / 4 else it / 4 } + fadeOut(tween(200))) },
-                                label = "tabTransition"
+                                animationSpec = tween(durationMillis = 180),
+                                label = "smoothTab"
                             ) { tab ->
                                 when (tab) {
                                     0 -> DashboardScreen(
@@ -203,7 +199,8 @@ class MainActivity : ComponentActivity() {
                                             }
                                         },
                                         onNavigateWebsites = { selectedTab = 1 },
-                                        onNavigateApps = { selectedTab = 2 }
+                                        onNavigateApps = { selectedTab = 2 },
+                                        onDismissAdminMsg = viewModel::dismissAdminMessage
                                     )
                                     1 -> WebsitesScreen(
                                         isArabic = state.isArabic,
@@ -226,7 +223,6 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
 
-                            // شريط التنقل السفلي العائم العصري (Floating Pill Navigation Bar)
                             Surface(
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
@@ -289,9 +285,9 @@ class MainActivity : ComponentActivity() {
                                 text = {
                                     Text(
                                         text = if (state.isArabic)
-                                            "يحتاج تطبيق رقيب لصلاحية الوصول إلى بيانات الاستخدام للتعرف على التطبيقات المثبتة وتذكيرك بعد 5 ثوانٍ من فتح أي تطبيق مقيد. تبقى جميع بياناتك على جهازك فقط."
+                                            "يحتاج تطبيق رقيب لصلاحية الوصول إلى بيانات الاستخدام لتفعيل التذكير التلقائي عند فتح تطبيقات التواصل الاجتماعي. تبقى جميع بياناتك على جهازك فقط."
                                         else
-                                            "RAQEEB needs Usage Access permission to detect installed apps and remind you 5 seconds after opening a restricted app. All data stays strictly on your device."
+                                            "RAQEEB needs Usage Access permission to enable automatic reminders on social apps. All data stays strictly on your device."
                                     )
                                 },
                                 confirmButton = {
