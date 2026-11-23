@@ -1,9 +1,18 @@
 package com.raqeeb.app
 
+import android.Manifest
+import android.app.Activity
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -11,11 +20,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.raqeeb.app.service.RaqeebVpnService
 import com.raqeeb.app.ui.components.RescueDialog
 import com.raqeeb.app.ui.screens.*
 import com.raqeeb.app.ui.theme.AccentGold
@@ -23,14 +37,49 @@ import com.raqeeb.app.ui.theme.DeepEmerald
 import com.raqeeb.app.ui.theme.RaqeebTheme
 import com.raqeeb.app.ui.theme.SoftWhite
 import com.raqeeb.app.ui.viewmodel.MainViewModel
+import com.raqeeb.app.util.PermissionHelper
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            val context = LocalContext.current
+            val lifecycleOwner = LocalLifecycleOwner.current
             val viewModel: MainViewModel = viewModel()
             val state by viewModel.uiState.collectAsState()
             var selectedTab by remember { mutableIntStateOf(0) }
+
+            val notificationLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { granted ->
+                viewModel.refreshSystemState(context)
+                if (granted) {
+                    PermissionHelper.sendReminderNotification(
+                        context,
+                        "رقيب جاهز لمرافقتك 🌿",
+                        "تم تفعيل الإشعارات الإيمانية بنجاح."
+                    )
+                }
+            }
+
+            val vpnLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.StartActivityForResult()
+            ) { result ->
+                if (result.resultCode == Activity.RESULT_OK) {
+                    context.startService(Intent(context, RaqeebVpnService::class.java))
+                    viewModel.setVpnActive(true)
+                }
+            }
+
+            DisposableEffect(lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        viewModel.refreshSystemState(context)
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+            }
 
             val layoutDirection = if (state.isArabic) LayoutDirection.Rtl else LayoutDirection.Ltr
 
@@ -42,11 +91,7 @@ class MainActivity : ComponentActivity() {
                             TopAppBar(
                                 title = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Shield,
-                                            contentDescription = null,
-                                            tint = AccentGold
-                                        )
+                                        Icon(Icons.Rounded.Shield, contentDescription = null, tint = AccentGold)
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
                                             text = if (state.isArabic) "رقيب | RAQEEB" else "RAQEEB",
@@ -106,33 +151,66 @@ class MainActivity : ComponentActivity() {
                         }
                     ) { innerPadding ->
                         Box(modifier = Modifier.padding(innerPadding)) {
-                            when (selectedTab) {
-                                0 -> DashboardScreen(
-                                    state = state,
-                                    onToggleProtection = viewModel::toggleProtection,
-                                    onSelectMode = viewModel::setProtectionMode,
-                                    onNextReminder = viewModel::nextReminder,
-                                    onOpenRescue = { viewModel.setShowRescueDialog(true) },
-                                    onNavigateWebsites = { selectedTab = 1 },
-                                    onNavigateApps = { selectedTab = 2 }
-                                )
-                                1 -> WebsitesScreen(
-                                    isArabic = state.isArabic,
-                                    domains = state.domains,
-                                    onAddDomain = viewModel::addDomain,
-                                    onToggleDomain = viewModel::toggleDomain,
-                                    onRemoveDomain = viewModel::removeDomain
-                                )
-                                2 -> AppsScreen(
-                                    isArabic = state.isArabic,
-                                    apps = state.apps,
-                                    onToggleApp = viewModel::toggleAppRestriction
-                                )
-                                3 -> ChallengesScreen(
-                                    isArabic = state.isArabic,
-                                    challenges = state.challenges,
-                                    onToggleChallenge = viewModel::toggleChallengeToday
-                                )
+                            AnimatedContent(
+                                targetState = selectedTab,
+                                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                                label = "tabTransition"
+                            ) { tab ->
+                                when (tab) {
+                                    0 -> DashboardScreen(
+                                        state = state,
+                                        onToggleProtection = viewModel::toggleProtection,
+                                        onSelectMode = viewModel::setProtectionMode,
+                                        onNextReminder = viewModel::nextReminder,
+                                        onOpenRescue = { viewModel.setShowRescueDialog(true) },
+                                        onRequestNotificationPerm = {
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                                notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                            }
+                                        },
+                                        onRequestAccessibilityPerm = {
+                                            PermissionHelper.openAccessibilitySettings(context)
+                                        },
+                                        onRequestUsageStatsPerm = {
+                                            PermissionHelper.openUsageAccessSettings(context)
+                                        },
+                                        onToggleVpn = {
+                                            if (state.permissions.vpnActive) {
+                                                context.startService(Intent(context, RaqeebVpnService::class.java).apply {
+                                                    action = "STOP_VPN"
+                                                })
+                                                viewModel.setVpnActive(false)
+                                            } else {
+                                                val vpnIntent = PermissionHelper.prepareVpnIntent(context)
+                                                if (vpnIntent != null) {
+                                                    vpnLauncher.launch(vpnIntent)
+                                                } else {
+                                                    context.startService(Intent(context, RaqeebVpnService::class.java))
+                                                    viewModel.setVpnActive(true)
+                                                }
+                                            }
+                                        },
+                                        onNavigateWebsites = { selectedTab = 1 },
+                                        onNavigateApps = { selectedTab = 2 }
+                                    )
+                                    1 -> WebsitesScreen(
+                                        isArabic = state.isArabic,
+                                        domains = state.domains,
+                                        onAddDomain = viewModel::addCustomDomain,
+                                        onToggleDomain = viewModel::toggleDomain,
+                                        onRemoveDomain = viewModel::removeDomain
+                                    )
+                                    2 -> AppsScreen(
+                                        isArabic = state.isArabic,
+                                        apps = state.apps,
+                                        onToggleApp = viewModel::toggleAppRestriction
+                                    )
+                                    3 -> ChallengesScreen(
+                                        isArabic = state.isArabic,
+                                        challenges = state.challenges,
+                                        onToggleChallenge = viewModel::toggleChallengeToday
+                                    )
+                                }
                             }
                         }
 
@@ -142,11 +220,10 @@ class MainActivity : ComponentActivity() {
                                 onDismiss = { viewModel.setShowRescueDialog(false) },
                                 onExitToHome = {
                                     viewModel.setShowRescueDialog(false)
-                                    val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+                                    startActivity(Intent(Intent.ACTION_MAIN).apply {
                                         addCategory(Intent.CATEGORY_HOME)
                                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    }
-                                    startActivity(homeIntent)
+                                    })
                                 }
                             )
                         }

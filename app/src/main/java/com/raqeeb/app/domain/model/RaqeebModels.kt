@@ -9,34 +9,35 @@ enum class ProtectionMode(
     REMINDER(
         titleAr = "وضع التذكير",
         titleEn = "Reminder Mode",
-        descAr = "يكتشف المواقع والتطبيقات المقيدة ويرسل تذكيرات إيمانية لطيفة دون حظر الوصول.",
-        descEn = "Detects restricted sites/apps and displays gentle Islamic reminders without blocking."
+        descAr = "يكتشف التطبيقات والمواقع المقيدة ويرسل إشعارات تذكير إيمانية دون حظر الوصول.",
+        descEn = "Detects restricted sites/apps and sends gentle Islamic notifications without blocking."
     ),
     SMART(
         titleAr = "الحماية الذكية",
         titleEn = "Smart Protection",
-        descAr = "يحظر المواقع المصنفة عبر VPN المحلي ويُذكّرك عند فتح التطبيقات المختارة.",
-        descEn = "Blocks categorized domains via local VPN and reminds you on selected apps."
+        descAr = "يحظر كافة المواقع الإباحية والضارة تلقائياً عبر DNS العائلي الآمن ويُذكّرك عند فتح التطبيقات المقيدة.",
+        descEn = "Automatically blocks all adult/harmful sites via Family DNS and reminds on restricted apps."
     ),
     STRICT(
         titleAr = "الحماية الصارمة",
         titleEn = "Strict Protection",
-        descAr = "يُفعّل الحظر الكامل للنطاقات المقيدة ويمنع الوصول للتطبيقات المقيدة بشاشة تدخل.",
-        descEn = "Enforces full domain blocking and prevents access to restricted apps with intervention."
+        descAr = "حظر شامل لكل المواقع الإباحية وإغلاق فوري لأي تطبيق مقيد عند محاولة فتحه.",
+        descEn = "Full adult domain blocking and immediate home redirection on restricted apps."
     )
 }
 
 enum class DomainCategory(val labelAr: String, val labelEn: String) {
-    ADULT("محتوى للبالغين", "Adult Content"),
+    ADULT("قاعدة المواقع الإباحية (مدمجة)", "Adult Sites Shield (Built-in)"),
     INAPPROPRIATE("محتوى غير لائق", "Inappropriate Content"),
     CUSTOM("مواقع مخصصة", "User-Defined")
 }
 
 data class RestrictedDomain(
     val id: Long,
-    val domain: String,
+    val maskedLabel: String,
     val category: DomainCategory,
-    val isEnabled: Boolean = true
+    val isEnabled: Boolean = true,
+    val isBuiltInShield: Boolean = false
 )
 
 data class RestrictedApp(
