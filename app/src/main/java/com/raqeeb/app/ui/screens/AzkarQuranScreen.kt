@@ -2,12 +2,15 @@ package com.raqeeb.app.ui.screens
 
 import android.content.Intent
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,6 +24,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -33,17 +38,32 @@ import com.raqeeb.app.data.ZikrItem
 import com.raqeeb.app.ui.theme.AccentGold
 import com.raqeeb.app.ui.theme.DeepEmerald
 import com.raqeeb.app.ui.theme.SoftWhite
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun AzkarQuranScreen(isArabic: Boolean) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var currentQuranMsg by remember { mutableStateOf(TrustedAzkarLibrary.quranMessages.random()) }
+    var isInspiring by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf("morning") }
     val remainingCounts = remember {
         mutableStateMapOf<Int, Int>().apply {
             TrustedAzkarLibrary.structuredAzkar.forEach { put(it.id, it.targetCount) }
         }
     }
+
+    val spinAngle by animateFloatAsState(
+        targetValue = if (isInspiring) 360f else 0f,
+        animationSpec = tween(durationMillis = 550, easing = FastOutSlowInEasing),
+        label = "inspireSpin"
+    )
+    val cardPulse by animateFloatAsState(
+        targetValue = if (isInspiring) 0.96f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "cardPulse"
+    )
 
     val filteredAzkar = remember(selectedCategory) {
         TrustedAzkarLibrary.structuredAzkar.filter { it.category == selectedCategory }
@@ -56,19 +76,19 @@ fun AzkarQuranScreen(isArabic: Boolean) {
         verticalArrangement = Arrangement.spacedBy(14.dp),
         contentPadding = PaddingValues(bottom = 86.dp)
     ) {
-        // 1. صندوق "رسائل من القرآن" العشوائي التفاعلي
         item {
             Card(
-                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier.scale(cardPulse),
+                shape = RoundedCornerShape(26.dp),
                 colors = CardDefaults.cardColors(containerColor = DeepEmerald),
                 border = BorderStroke(1.5.dp, AccentGold)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Brush.verticalGradient(listOf(DeepEmerald, Color(0xFF0A3D2E))))
-                        .padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                        .background(Brush.verticalGradient(listOf(Color(0xFF041C15), DeepEmerald, Color(0xFF0A3D2E))))
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -76,14 +96,37 @@ fun AzkarQuranScreen(isArabic: Boolean) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.MenuBook, contentDescription = null, tint = AccentGold)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (isArabic) "رسائل من القرآن لك" else "Messages from the Quran",
-                                color = AccentGold,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 16.sp
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(AccentGold.copy(alpha = 0.16f))
+                                    .border(1.dp, AccentGold.copy(alpha = 0.5f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = AccentGold,
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .rotate(spinAngle)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = if (isArabic) "رسالة من القرآن لك" else "Message from the Quran",
+                                    color = AccentGold,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 17.sp
+                                )
+                                Text(
+                                    text = if (isArabic) "نورٌ يضيء دربك في كل لحظة" else "Light for your heart",
+                                    color = SoftWhite.copy(alpha = 0.7f),
+                                    fontSize = 11.sp
+                                )
+                            }
                         }
 
                         IconButton(
@@ -95,9 +138,9 @@ fun AzkarQuranScreen(isArabic: Boolean) {
                                         "${currentQuranMsg.verseAr}\n(${currentQuranMsg.surahRef})\n\n${currentQuranMsg.heartMessage}\n— تطبيق رقيب"
                                     )
                                 }
-                                context.startActivity(Intent.createChooser(shareIntent, "مشاركة رسالة من القرآن"))
+                                context.startActivity(Intent.createChooser(shareIntent, "مشاركة رسالة من القرآن لك"))
                             },
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(34.dp)
                         ) {
                             Icon(Icons.Rounded.Share, contentDescription = "Share", tint = AccentGold, modifier = Modifier.size(18.dp))
                         }
@@ -105,17 +148,20 @@ fun AzkarQuranScreen(isArabic: Boolean) {
 
                     AnimatedContent(
                         targetState = currentQuranMsg,
-                        transitionSpec = { fadeIn(tween(240)) togetherWith fadeOut(tween(180)) },
-                        label = "quranMsgFade"
+                        transitionSpec = {
+                            (scaleIn(initialScale = 0.88f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(tween(300))) togetherWith
+                                (scaleOut(targetScale = 0.92f, animationSpec = tween(200)) + fadeOut(tween(200)))
+                        },
+                        label = "quranInsightAnim"
                     ) { msg ->
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text(
                                 text = msg.verseAr,
                                 color = SoftWhite,
-                                fontSize = 18.sp,
+                                fontSize = 19.sp,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center,
-                                lineHeight = 30.sp,
+                                lineHeight = 32.sp,
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Text(
@@ -127,15 +173,16 @@ fun AzkarQuranScreen(isArabic: Boolean) {
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Surface(
-                                shape = RoundedCornerShape(14.dp),
-                                color = Color.Black.copy(alpha = 0.28f)
+                                shape = RoundedCornerShape(16.dp),
+                                color = Color.Black.copy(alpha = 0.30f),
+                                border = BorderStroke(0.5.dp, AccentGold.copy(alpha = 0.25f))
                             ) {
                                 Text(
                                     text = msg.heartMessage,
-                                    color = SoftWhite.copy(alpha = 0.9f),
+                                    color = SoftWhite.copy(alpha = 0.92f),
                                     fontSize = 13.sp,
-                                    lineHeight = 20.sp,
-                                    modifier = Modifier.padding(12.dp)
+                                    lineHeight = 21.sp,
+                                    modifier = Modifier.padding(14.dp)
                                 )
                             }
                         }
@@ -143,27 +190,41 @@ fun AzkarQuranScreen(isArabic: Boolean) {
 
                     Button(
                         onClick = {
-                            val others = TrustedAzkarLibrary.quranMessages.filter { it != currentQuranMsg }
-                            currentQuranMsg = others.random()
+                            if (!isInspiring) {
+                                scope.launch {
+                                    isInspiring = true
+                                    delay(220L)
+                                    val others = TrustedAzkarLibrary.quranMessages.filter { it != currentQuranMsg }
+                                    currentQuranMsg = others.random()
+                                    delay(330L)
+                                    isInspiring = false
+                                }
+                            }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = AccentGold)
                     ) {
-                        Icon(Icons.Rounded.AutoAwesome, contentDescription = null, tint = DeepEmerald, modifier = Modifier.size(18.dp))
+                        Icon(
+                            imageVector = Icons.Rounded.AutoAwesome,
+                            contentDescription = null,
+                            tint = DeepEmerald,
+                            modifier = Modifier
+                                .size(18.dp)
+                                .rotate(spinAngle)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (isArabic) "افتح رسالة قرآنية جديدة" else "Open New Quranic Message",
+                            text = if (isArabic) "استلهم آية جديدة" else "Inspire Another Verse",
                             color = DeepEmerald,
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 13.sp
+                            fontSize = 14.sp
                         )
                     }
                 }
             }
         }
 
-        // 2. تبويبات تقسيم الأذكار (الصباح | المساء | أدعية الثبات)
         item {
             Row(
                 modifier = Modifier
@@ -200,7 +261,6 @@ fun AzkarQuranScreen(isArabic: Boolean) {
             }
         }
 
-        // 3. قائمة الأذكار المنظمة مع عدّاد تسبيح تفاعلي بالضغط
         items(filteredAzkar, key = { it.id }) { item ->
             val left = remainingCounts[item.id] ?: item.targetCount
             ZikrCounterCard(

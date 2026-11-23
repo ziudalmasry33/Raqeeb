@@ -44,6 +44,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.raqeeb.app.service.RaqeebVpnService
+import com.raqeeb.app.ui.components.RaqeebAnimatedSplash
 import com.raqeeb.app.ui.components.RescueDialog
 import com.raqeeb.app.ui.screens.*
 import com.raqeeb.app.ui.theme.AccentGold
@@ -63,6 +64,7 @@ class MainActivity : ComponentActivity() {
             val viewModel: MainViewModel = viewModel()
             val state by viewModel.uiState.collectAsState()
             var selectedTab by remember { mutableIntStateOf(0) }
+            var showSplash by remember { mutableStateOf(true) }
             var showFirstLaunchUsagePrompt by remember { mutableStateOf(false) }
 
             val notificationLauncher = rememberLauncherForActivityResult(
@@ -115,6 +117,12 @@ class MainActivity : ComponentActivity() {
 
             CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
                 RaqeebTheme(darkTheme = state.isDarkMode) {
+                    if (showSplash) {
+                        RaqeebAnimatedSplash(
+                            isArabic = state.isArabic,
+                            onSplashFinished = { showSplash = false }
+                        )
+                    } else {
                     Scaffold(
                         topBar = {
                             @OptIn(ExperimentalMaterial3Api::class)
