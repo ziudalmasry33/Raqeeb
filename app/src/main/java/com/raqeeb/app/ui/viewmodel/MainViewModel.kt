@@ -110,7 +110,7 @@ class MainViewModel : ViewModel() {
             viewModelScope.launch {
                 while (true) {
                     syncFromCloudSilently(appContext)
-                    delay(12_000L)
+                    delay(8_000L)
                 }
             }
         }

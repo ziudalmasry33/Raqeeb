@@ -9,20 +9,23 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object SupabaseSyncClient {
-    var supabaseUrl: String = "https://nirnxfisfdmlkhszkirb.supabase.co"
-    var supabaseAnonKey: String = "sb_publishable_bQd9POM_FPi9QnR3LtBaow_cv1xWtDt"
+    const val SUPABASE_URL = "https://nirnxfisfdmlkhszkirb.supabase.co"
+    const val SUPABASE_KEY = "sb_publishable_bQd9POM_FPi9QnR3LtBaow_cv1xWtDt"
+
+    private fun openGetConnection(endpoint: String): HttpURLConnection {
+        val url = URL("$SUPABASE_URL/rest/v1/$endpoint")
+        return (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            setRequestProperty("apikey", SUPABASE_KEY)
+            setRequestProperty("Accept", "application/json")
+            connectTimeout = 8000
+            readTimeout = 8000
+        }
+    }
 
     suspend fun fetchLatestAdminMessage(): AdminBroadcast? = withContext(Dispatchers.IO) {
-        if (supabaseUrl.isBlank() || supabaseAnonKey.isBlank()) return@withContext null
         try {
-            val url = URL("${supabaseUrl.trimEnd('/')}/rest/v1/admin_messages?select=*&order=id.desc&limit=1")
-            val conn = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                setRequestProperty("apikey", supabaseAnonKey)
-                setRequestProperty("Authorization", "Bearer $supabaseAnonKey")
-                connectTimeout = 6000
-                readTimeout = 6000
-            }
+            val conn = openGetConnection("admin_messages?select=id,title_ar,body_ar,created_at&order=id.desc&limit=1")
             if (conn.responseCode in 200..299) {
                 val body = conn.inputStream.bufferedReader().readText()
                 val arr = JSONArray(body)
@@ -43,16 +46,8 @@ object SupabaseSyncClient {
     }
 
     suspend fun fetchPublishedReminders(): List<IslamicReminder> = withContext(Dispatchers.IO) {
-        if (supabaseUrl.isBlank() || supabaseAnonKey.isBlank()) return@withContext emptyList()
         try {
-            val url = URL("${supabaseUrl.trimEnd('/')}/rest/v1/islamic_reminders?select=*&is_published=eq.true&order=id.desc&limit=20")
-            val conn = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                setRequestProperty("apikey", supabaseAnonKey)
-                setRequestProperty("Authorization", "Bearer $supabaseAnonKey")
-                connectTimeout = 6000
-                readTimeout = 6000
-            }
+            val conn = openGetConnection("islamic_reminders?select=text_ar,text_en,source_ar,source_en&is_published=eq.true&order=id.desc&limit=20")
             if (conn.responseCode in 200..299) {
                 val body = conn.inputStream.bufferedReader().readText()
                 val arr = JSONArray(body)
@@ -77,16 +72,8 @@ object SupabaseSyncClient {
     }
 
     suspend fun fetchRemoteBlockedDomains(): List<String> = withContext(Dispatchers.IO) {
-        if (supabaseUrl.isBlank() || supabaseAnonKey.isBlank()) return@withContext emptyList()
         try {
-            val url = URL("${supabaseUrl.trimEnd('/')}/rest/v1/blocked_domains?select=domain&is_active=eq.true&limit=500")
-            val conn = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                setRequestProperty("apikey", supabaseAnonKey)
-                setRequestProperty("Authorization", "Bearer $supabaseAnonKey")
-                connectTimeout = 6000
-                readTimeout = 6000
-            }
+            val conn = openGetConnection("blocked_domains?select=domain&is_active=eq.true&limit=500")
             if (conn.responseCode in 200..299) {
                 val body = conn.inputStream.bufferedReader().readText()
                 val arr = JSONArray(body)

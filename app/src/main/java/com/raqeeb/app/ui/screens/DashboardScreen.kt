@@ -5,6 +5,8 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -50,7 +52,6 @@ fun DashboardScreen(
     onNavigateApps: () -> Unit,
     onDismissAdminMsg: () -> Unit = {}
 ) {
-    // تحديث تلقائي للذكر والآية كل 10 ثوانٍ بدون أي ضغط من المستخدم
     LaunchedEffect(Unit) {
         while (true) {
             delay(10_000L)
@@ -60,7 +61,7 @@ fun DashboardScreen(
 
     val ringColor by animateColorAsState(
         targetValue = if (state.isProtectionEnabled) AccentGold else AlertRed,
-        animationSpec = tween(250),
+        animationSpec = tween(200),
         label = "ringColor"
     )
 
@@ -71,7 +72,6 @@ fun DashboardScreen(
             .padding(horizontal = 18.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 0. بطاقة رسالة الإدارة الفورية (تظهر تلقائياً عند إرسال رسالة من لوحة الأدمن)
         state.latestAdminMessage?.let { adminMsg ->
             Card(
                 shape = RoundedCornerShape(20.dp),
@@ -113,7 +113,6 @@ fun DashboardScreen(
             }
         }
 
-        // 1. مركز الحماية الدائري العصري
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -205,7 +204,6 @@ fun DashboardScreen(
             }
         }
 
-        // 2. زر "لحظة سَكينة"
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -253,7 +251,6 @@ fun DashboardScreen(
             }
         }
 
-        // 3. بطاقة الإشراقة الإيمانية (تتبدل تلقائياً كل 10 ثوانٍ بانسيابية ناعمة)
         Card(
             shape = RoundedCornerShape(22.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -265,27 +262,24 @@ fun DashboardScreen(
                     .padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.AutoAwesome, contentDescription = null, tint = AccentGold, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (state.isArabic) "إشراقة إيمانية (تتجدد تلقائياً)" else "Auto-Refreshing Reflection",
-                            color = AccentGold,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
-                    }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.AutoAwesome, contentDescription = null, tint = AccentGold, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (state.isArabic) "إشراقة إيمانية (تتجدد تلقائياً)" else "Auto-Refreshing Reflection",
+                        color = AccentGold,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
                 }
 
                 AnimatedContent(
                     targetState = state.currentReminder,
-                    transitionSpec = { fadeIn(tween(350)) togetherWith fadeOut(tween(250)) },
-                    label = "reminderFade"
+                    transitionSpec = {
+                        (slideInVertically(tween(280)) { 18 } + fadeIn(tween(280))) togetherWith
+                            (slideOutVertically(tween(200)) { -18 } + fadeOut(tween(200)))
+                    },
+                    label = "reminderSlide"
                 ) { reminder ->
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
@@ -304,7 +298,6 @@ fun DashboardScreen(
             }
         }
 
-        // 4. وحدات الوقاية الذكية
         Text(
             text = if (state.isArabic) "وحدات الوقاية الذكية" else "Smart Guard Modules",
             fontWeight = FontWeight.Bold,
@@ -370,12 +363,12 @@ private fun ModernControlTile(
 ) {
     val bgColor by animateColorAsState(
         targetValue = if (isActive) DeepEmerald else MaterialTheme.colorScheme.surfaceVariant,
-        animationSpec = tween(220),
+        animationSpec = tween(180),
         label = "tileBg"
     )
     val borderColor by animateColorAsState(
         targetValue = if (isActive) AccentGold else Color.Gray.copy(alpha = 0.2f),
-        animationSpec = tween(220),
+        animationSpec = tween(180),
         label = "tileBorder"
     )
 

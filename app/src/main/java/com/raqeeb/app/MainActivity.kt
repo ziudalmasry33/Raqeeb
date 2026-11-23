@@ -9,11 +9,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +29,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -157,70 +162,64 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .padding(innerPadding)
                         ) {
-                            // انتقال Crossfade ناعم وخفيف 180ms بدون أي تهنيج
-                            Crossfade(
-                                targetState = selectedTab,
-                                animationSpec = tween(durationMillis = 180),
-                                label = "smoothTab"
-                            ) { tab ->
-                                when (tab) {
-                                    0 -> DashboardScreen(
-                                        state = state,
-                                        onToggleProtection = viewModel::toggleProtection,
-                                        onSelectMode = viewModel::setProtectionMode,
-                                        onNextReminder = viewModel::nextReminder,
-                                        onOpenRescue = { viewModel.setShowRescueDialog(true) },
-                                        onRequestNotificationPerm = {
-                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                                notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                            }
-                                        },
-                                        onRequestAccessibilityPerm = {
-                                            PermissionHelper.openAccessibilitySettings(context)
-                                        },
-                                        onRequestUsageStatsPerm = {
-                                            PermissionHelper.openUsageAccessSettings(context)
-                                        },
-                                        onToggleVpn = {
-                                            if (state.permissions.vpnActive || RaqeebVpnService.isRunning) {
-                                                context.startService(Intent(context, RaqeebVpnService::class.java).apply {
-                                                    action = "STOP_VPN"
-                                                })
-                                                viewModel.setVpnActive(false)
+                            // تبديل فوري لحظي بدون رسم شاشتين فوق بعضهما (صفر تقطيع + 120fps)
+                            when (selectedTab) {
+                                0 -> DashboardScreen(
+                                    state = state,
+                                    onToggleProtection = viewModel::toggleProtection,
+                                    onSelectMode = viewModel::setProtectionMode,
+                                    onNextReminder = viewModel::nextReminder,
+                                    onOpenRescue = { viewModel.setShowRescueDialog(true) },
+                                    onRequestNotificationPerm = {
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        }
+                                    },
+                                    onRequestAccessibilityPerm = {
+                                        PermissionHelper.openAccessibilitySettings(context)
+                                    },
+                                    onRequestUsageStatsPerm = {
+                                        PermissionHelper.openUsageAccessSettings(context)
+                                    },
+                                    onToggleVpn = {
+                                        if (state.permissions.vpnActive || RaqeebVpnService.isRunning) {
+                                            context.startService(Intent(context, RaqeebVpnService::class.java).apply {
+                                                action = "STOP_VPN"
+                                            })
+                                            viewModel.setVpnActive(false)
+                                        } else {
+                                            val vpnIntent = PermissionHelper.prepareVpnIntent(context)
+                                            if (vpnIntent != null) {
+                                                vpnLauncher.launch(vpnIntent)
                                             } else {
-                                                val vpnIntent = PermissionHelper.prepareVpnIntent(context)
-                                                if (vpnIntent != null) {
-                                                    vpnLauncher.launch(vpnIntent)
-                                                } else {
-                                                    val startIntent = Intent(context, RaqeebVpnService::class.java)
-                                                    ContextCompat.startForegroundService(context, startIntent)
-                                                    viewModel.setVpnActive(true)
-                                                }
+                                                val startIntent = Intent(context, RaqeebVpnService::class.java)
+                                                ContextCompat.startForegroundService(context, startIntent)
+                                                viewModel.setVpnActive(true)
                                             }
-                                        },
-                                        onNavigateWebsites = { selectedTab = 1 },
-                                        onNavigateApps = { selectedTab = 2 },
-                                        onDismissAdminMsg = viewModel::dismissAdminMessage
-                                    )
-                                    1 -> WebsitesScreen(
-                                        isArabic = state.isArabic,
-                                        domains = state.domains,
-                                        onAddDomain = viewModel::addCustomDomain,
-                                        onToggleDomain = viewModel::toggleDomain,
-                                        onRemoveDomain = viewModel::removeDomain
-                                    )
-                                    2 -> AppsScreen(
-                                        isArabic = state.isArabic,
-                                        apps = state.apps,
-                                        onToggleApp = viewModel::toggleAppRestriction
-                                    )
-                                    3 -> ChallengesScreen(
-                                        isArabic = state.isArabic,
-                                        challenges = state.challenges,
-                                        onCompleteChallenge = viewModel::completeChallengeToday,
-                                        onAddChallenge = viewModel::addCustomChallenge
-                                    )
-                                }
+                                        }
+                                    },
+                                    onNavigateWebsites = { selectedTab = 1 },
+                                    onNavigateApps = { selectedTab = 2 },
+                                    onDismissAdminMsg = viewModel::dismissAdminMessage
+                                )
+                                1 -> WebsitesScreen(
+                                    isArabic = state.isArabic,
+                                    domains = state.domains,
+                                    onAddDomain = viewModel::addCustomDomain,
+                                    onToggleDomain = viewModel::toggleDomain,
+                                    onRemoveDomain = viewModel::removeDomain
+                                )
+                                2 -> AppsScreen(
+                                    isArabic = state.isArabic,
+                                    apps = state.apps,
+                                    onToggleApp = viewModel::toggleAppRestriction
+                                )
+                                3 -> ChallengesScreen(
+                                    isArabic = state.isArabic,
+                                    challenges = state.challenges,
+                                    onCompleteChallenge = viewModel::completeChallengeToday,
+                                    onAddChallenge = viewModel::addCustomChallenge
+                                )
                             }
 
                             Surface(
@@ -231,7 +230,7 @@ class MainActivity : ComponentActivity() {
                                 shape = RoundedCornerShape(50),
                                 color = DeepEmerald.copy(alpha = 0.96f),
                                 border = BorderStroke(1.dp, AccentGold.copy(alpha = 0.45f)),
-                                shadowElevation = 10.dp
+                                shadowElevation = 8.dp
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -338,11 +337,26 @@ private fun FloatingNavItem(
     outlinedIcon: ImageVector,
     onClick: () -> Unit
 ) {
+    val scale by animateFloatAsState(
+        targetValue = if (selected) 1.06f else 1.0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
+        label = "navScale"
+    )
+    val bgColor by animateColorAsState(
+        targetValue = if (selected) AccentGold else Color.Transparent,
+        animationSpec = tween(150),
+        label = "navBg"
+    )
+
     Row(
         modifier = Modifier
+            .scale(scale)
             .clip(RoundedCornerShape(50))
-            .background(if (selected) AccentGold else Color.Transparent)
-            .clickable { onClick() }
+            .background(bgColor)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() }
             .padding(horizontal = if (selected) 14.dp else 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
