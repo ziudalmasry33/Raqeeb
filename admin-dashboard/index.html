@@ -25,7 +25,7 @@
       display: flex; justify-content: space-between; align-items: center;
       position: sticky; top: 0; z-index: 50;
     }
-    .brand { display: flex; align-items: center; gap: 10px; font-size: 1.25rem; font-weight: 800; color: var(--gold); }
+    .brand { display: flex; align-items: center; gap: 10px; font-size: 1.2rem; font-weight: 800; color: var(--gold); }
     .container { max-width: 960px; margin: 28px auto; padding: 0 16px; }
     .card {
       background: var(--card-bg);
@@ -60,8 +60,13 @@
       cursor: pointer;
       width: 100%;
     }
-    button.secondary { background: transparent; border: 1px solid var(--gold); color: var(--gold); }
     button.danger { background: #B91C1C; color: #fff; width: auto; padding: 8px 14px; font-size: 0.85rem; }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34D399; padding: 6px 14px; border-radius: 99px; font-size: 0.85rem; font-weight: bold;
+      margin-bottom: 18px;
+    }
     .hidden { display: none !important; }
     .toast {
       position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
@@ -86,19 +91,12 @@
     </section>
 
     <div id="dashboardView" class="hidden">
-      <section class="card">
-        <h2>🔗 إعدادات الربط السحابي (Supabase)</h2>
-        <div class="grid-2">
-          <input id="sbUrl" type="text" placeholder="Project URL (https://xxxx.supabase.co)" />
-          <input id="sbKey" type="text" placeholder="Anon Public Key (eyJhbGci...)" />
-        </div>
-        <button class="secondary" onclick="saveSupabaseConfig()">حفظ وتفعيل الاتصال السحابي</button>
-      </section>
+      <div class="status-pill">● متصل تلقائياً بقاعدة بيانات تطبيق رقيب السحابية</div>
 
       <!-- إرسال رسالة فورية تظهر في التطبيق وإشعارات الهاتف -->
       <section class="card">
         <h2>📢 إرسال رسالة فورية للتطبيق (تصل كإشعار وبطاقة في الرئيسية)</h2>
-        <input id="msgTitle" placeholder="عنوان الرسالة (مثال: تذكير من رقيب 🌿)" value="رسالة من إدارة رقيب 🌿" />
+        <input id="msgTitle" placeholder="عنوان الرسالة" value="رسالة من إدارة رقيب 🌿" />
         <textarea id="msgBody" rows="3" placeholder="اكتب نص الرسالة التي ستصل لمستخدمي التطبيق فوراً..."></textarea>
         <button onclick="sendBroadcastMessage()">إرسال الرسالة الآن للتطبيق</button>
       </section>
@@ -119,13 +117,29 @@
         </div>
         <button onclick="publishReminder()">نشر في الإشراقات الإيمانية</button>
       </section>
+
+      <!-- إضافة نطاق لقاعدة التصفية الآمنة -->
+      <section class="card">
+        <h2>🛡️ إضافة نطاق لقاعدة التصفية الآمنة</h2>
+        <div class="grid-2">
+          <input id="dName" placeholder="example.com" />
+          <select id="dCat">
+            <option value="SAFE_SHIELD">محتوى غير لائق</option>
+            <option value="HARMFUL">مواقع ضارة ومشتتة</option>
+          </select>
+        </div>
+        <button onclick="addBlockedDomain()">إضافة النطاق لدرع الحماية</button>
+      </section>
     </div>
   </div>
 
   <div id="toast" class="toast hidden"></div>
 
   <script>
-    let sb = null;
+    const SUPABASE_URL = "https://nirnxfisfdmlkhszkirb.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_bQd9POM_FPi9QnR3LtBaow_cv1xWtDt";
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     const ADMIN_USER = "admin";
     const ADMIN_PASS = "komando_admin_raqeeb@";
 
@@ -134,16 +148,6 @@
       t.textContent = msg;
       t.classList.remove('hidden');
       setTimeout(() => t.classList.add('hidden'), 3200);
-    }
-
-    function initSupabase() {
-      const u = localStorage.getItem('sbUrl') || '';
-      const k = localStorage.getItem('sbKey') || '';
-      document.getElementById('sbUrl').value = u;
-      document.getElementById('sbKey').value = k;
-      if (u && k && window.supabase) {
-        sb = window.supabase.createClient(u, k);
-      }
     }
 
     function handleAdminLogin() {
@@ -166,21 +170,12 @@
       document.getElementById('loginView').classList.toggle('hidden', isAuth);
       document.getElementById('dashboardView').classList.toggle('hidden', !isAuth);
       document.getElementById('logoutBtn').classList.toggle('hidden', !isAuth);
-      if (isAuth) initSupabase();
-    }
-
-    function saveSupabaseConfig() {
-      localStorage.setItem('sbUrl', document.getElementById('sbUrl').value.trim());
-      localStorage.setItem('sbKey', document.getElementById('sbKey').value.trim());
-      initSupabase();
-      showToast("تم حفظ إعدادات الربط السحابي بنجاح ✅");
     }
 
     async function sendBroadcastMessage() {
       const title = document.getElementById('msgTitle').value.trim();
       const body = document.getElementById('msgBody').value.trim();
       if (!body) return showToast("اكتب نص الرسالة أولاً");
-      if (!sb) return showToast("يرجى إدخال Project URL و Anon Key وحفظهما أولاً");
 
       const { error } = await sb.from('admin_messages').insert({
         title_ar: title || "رسالة من رقيب 🌿",
@@ -196,7 +191,6 @@
     async function publishReminder() {
       const textAr = document.getElementById('rTextAr').value.trim();
       if (!textAr) return showToast("يرجى كتابة النص أولاً");
-      if (!sb) return showToast("يرجى حفظ إعدادات Supabase أولاً");
       const { error } = await sb.from('islamic_reminders').insert({
         content_type: document.getElementById('rType').value,
         text_ar: textAr,
@@ -206,6 +200,17 @@
         is_published: true
       });
       showToast(error ? "خطأ: " + error.message : "تم نشر التذكير في التطبيق ✅");
+    }
+
+    async function addBlockedDomain() {
+      const domain = document.getElementById('dName').value.trim().toLowerCase();
+      if (!domain) return showToast("أدخل اسم النطاق أولاً");
+      const { error } = await sb.from('blocked_domains').insert({
+        domain: domain,
+        category: document.getElementById('dCat').value,
+        is_active: true
+      });
+      showToast(error ? "خطأ: " + error.message : "تمت إضافة النطاق لدرع الحماية ✅");
     }
 
     renderAuthState();

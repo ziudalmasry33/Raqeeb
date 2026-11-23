@@ -104,7 +104,6 @@ class MainViewModel : ViewModel() {
             )
         }
 
-        // جلب رسائل الأدمن والتذكيرات من السحابة
         syncFromAdminCloud(appContext)
 
         if (_uiState.value.apps.isEmpty() && !_uiState.value.isLoadingApps) {
@@ -133,13 +132,14 @@ class MainViewModel : ViewModel() {
     fun syncFromAdminCloud(context: Context) {
         viewModelScope.launch {
             val msg = SupabaseSyncClient.fetchLatestAdminMessage()
-            if (msg != null) {
+            if (msg != null && msg.body.isNotBlank()) {
                 _uiState.update { it.copy(latestAdminMessage = msg) }
                 if (msg.id != lastNotifiedMessageId) {
                     lastNotifiedMessageId = msg.id
                     PermissionHelper.sendReminderNotification(context, msg.title, msg.body)
                 }
             }
+
             val remoteReminders = SupabaseSyncClient.fetchPublishedReminders()
             if (remoteReminders.isNotEmpty()) {
                 val combined = remoteReminders + defaultReminders
@@ -149,6 +149,11 @@ class MainViewModel : ViewModel() {
                         currentReminder = combined.first()
                     )
                 }
+            }
+
+            val remoteDomains = SupabaseSyncClient.fetchRemoteBlockedDomains()
+            if (remoteDomains.isNotEmpty()) {
+                RaqeebVpnService.customBlockedDomains.addAll(remoteDomains)
             }
         }
     }

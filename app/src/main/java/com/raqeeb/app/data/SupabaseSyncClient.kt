@@ -9,9 +9,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object SupabaseSyncClient {
-    // أدخل رابط مشروع Supabase ومفتاح Anon Key هنا ليتم الربط التلقائي في كل الأجهزة
-    var supabaseUrl: String = ""
-    var supabaseAnonKey: String = ""
+    var supabaseUrl: String = "https://nirnxfisfdmlkhszkirb.supabase.co"
+    var supabaseAnonKey: String = "sb_publishable_bQd9POM_FPi9QnR3LtBaow_cv1xWtDt"
 
     suspend fun fetchLatestAdminMessage(): AdminBroadcast? = withContext(Dispatchers.IO) {
         if (supabaseUrl.isBlank() || supabaseAnonKey.isBlank()) return@withContext null
@@ -21,8 +20,8 @@ object SupabaseSyncClient {
                 requestMethod = "GET"
                 setRequestProperty("apikey", supabaseAnonKey)
                 setRequestProperty("Authorization", "Bearer $supabaseAnonKey")
-                connectTimeout = 5000
-                readTimeout = 5000
+                connectTimeout = 6000
+                readTimeout = 6000
             }
             if (conn.responseCode in 200..299) {
                 val body = conn.inputStream.bufferedReader().readText()
@@ -31,7 +30,7 @@ object SupabaseSyncClient {
                     val obj = arr.getJSONObject(0)
                     return@withContext AdminBroadcast(
                         id = obj.optLong("id", 0L),
-                        title = obj.optString("title_ar", "رسالة من الإدارة"),
+                        title = obj.optString("title_ar", "رسالة من إدارة رقيب 🌿"),
                         body = obj.optString("body_ar", ""),
                         timestamp = obj.optString("created_at", "").take(10)
                     )
@@ -51,8 +50,8 @@ object SupabaseSyncClient {
                 requestMethod = "GET"
                 setRequestProperty("apikey", supabaseAnonKey)
                 setRequestProperty("Authorization", "Bearer $supabaseAnonKey")
-                connectTimeout = 5000
-                readTimeout = 5000
+                connectTimeout = 6000
+                readTimeout = 6000
             }
             if (conn.responseCode in 200..299) {
                 val body = conn.inputStream.bufferedReader().readText()
@@ -70,6 +69,33 @@ object SupabaseSyncClient {
                     )
                 }
                 return@withContext list
+            }
+            emptyList()
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun fetchRemoteBlockedDomains(): List<String> = withContext(Dispatchers.IO) {
+        if (supabaseUrl.isBlank() || supabaseAnonKey.isBlank()) return@withContext emptyList()
+        try {
+            val url = URL("${supabaseUrl.trimEnd('/')}/rest/v1/blocked_domains?select=domain&is_active=eq.true&limit=500")
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                setRequestProperty("apikey", supabaseAnonKey)
+                setRequestProperty("Authorization", "Bearer $supabaseAnonKey")
+                connectTimeout = 6000
+                readTimeout = 6000
+            }
+            if (conn.responseCode in 200..299) {
+                val body = conn.inputStream.bufferedReader().readText()
+                val arr = JSONArray(body)
+                val domains = mutableListOf<String>()
+                for (i in 0 until arr.length()) {
+                    val d = arr.getJSONObject(i).optString("domain").trim().lowercase()
+                    if (d.isNotBlank()) domains.add(d)
+                }
+                return@withContext domains
             }
             emptyList()
         } catch (_: Exception) {
