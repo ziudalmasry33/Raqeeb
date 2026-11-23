@@ -114,13 +114,6 @@ class MainViewModel : ViewModel() {
             _uiState.update { it.copy(isLoadingApps = true) }
             viewModelScope.launch {
                 val installed = withContext(Dispatchers.IO) {
-                    PermissionHelper.getInstalledUserApps(appContext)
-                }
-                _uiState.update { it.copy(apps = installed, isLoadingApps = false) }
-            }
-        }
-
-        if (!pollingStarted) {
             pollingStarted = true
             viewModelScope.launch {
                 while (true) {

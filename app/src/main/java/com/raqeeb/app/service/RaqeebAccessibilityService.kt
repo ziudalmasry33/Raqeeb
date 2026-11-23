@@ -7,6 +7,7 @@ import android.os.Looper
 import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
 import com.raqeeb.app.data.SupabaseSyncClient
+import com.raqeeb.app.data.TrustedAzkarLibrary
 import com.raqeeb.app.util.PermissionHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,12 +24,18 @@ class RaqeebAccessibilityService : AccessibilityService() {
             "com.facebook.lite",
             "com.facebook.orca",
             "com.instagram.android",
+            "com.instagram.barcelona",
             "com.zhiliaoapp.musically",
             "com.ss.android.ugc.trill",
             "org.telegram.messenger",
+            "org.telegram.messenger.web",
             "com.snapchat.android",
             "com.twitter.android",
-            "com.google.android.youtube"
+            "com.google.android.youtube",
+            "com.reddit.frontpage",
+            "com.pinterest",
+            "tv.twitch.android.app",
+            "com.discord"
         )
         var isProtectionActive: Boolean = true
         var isStrictMode: Boolean = false
@@ -39,14 +46,6 @@ class RaqeebAccessibilityService : AccessibilityService() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var pendingRunnable: Runnable? = null
     private var currentForegroundPkg: String? = null
-
-    private val calmingReminders = listOf(
-        "﴿ أَلَمْ يَعْلَم بِأَنَّ اللَّهَ يَرَىٰ ﴾ — سورة العلق",
-        "﴿ قُل لِّلْمُؤْمِنِينَ يَغُضُّوا مِنْ أَبْصَارِهِمْ ﴾ — سورة النور",
-        "«مَن تَرَكَ شيئًا للهِ عوَّضَه اللهُ خيرًا منه» — حديث صحيح",
-        "﴿ أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ ﴾ — سورة الرعد",
-        "استعن بالله واحفظ بصرك ووقتك فيما ينفعك 🌿"
-    )
 
     private val adminPollRunnable = object : Runnable {
         override fun run() {
@@ -86,15 +85,16 @@ class RaqeebAccessibilityService : AccessibilityService() {
         pendingRunnable?.let { handler.removeCallbacks(it) }
 
         if (restrictedPackages.contains(pkg)) {
+            val randomMsg = TrustedAzkarLibrary.allReminders.random().textAr
             if (isStrictMode) {
                 performGlobalAction(GLOBAL_ACTION_HOME)
-                triggerAlternatingAlert(calmingReminders.random())
+                triggerAlternatingAlert(randomMsg)
                 return
             }
 
             val runnable = Runnable {
                 if (currentForegroundPkg == pkg && isProtectionActive) {
-                    triggerAlternatingAlert(calmingReminders.random())
+                    triggerAlternatingAlert(randomMsg)
                 }
             }
             pendingRunnable = runnable
@@ -105,10 +105,8 @@ class RaqeebAccessibilityService : AccessibilityService() {
     private fun triggerAlternatingAlert(text: String) {
         alertCounter++
         if (alertCounter % 2 == 1) {
-            // المرة الفردية: رسالة Toast أنيقة من أسفل الشاشة
             Toast.makeText(applicationContext, "🌿 رقيب: $text", Toast.LENGTH_LONG).show()
         } else {
-            // المرة الزوجية: إشعار في شريط الإشعارات
             PermissionHelper.sendReminderNotification(
                 this,
                 "تذكير لطيف من رقيب 🌿",

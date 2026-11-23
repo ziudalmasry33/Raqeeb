@@ -212,10 +212,8 @@ class MainActivity : ComponentActivity() {
                                     onToggleDomain = viewModel::toggleDomain,
                                     onRemoveDomain = viewModel::removeDomain
                                 )
-                                2 -> AppsScreen(
+                                2 -> AzkarQuranScreen(isArabic = state.isArabic) //
                                     isArabic = state.isArabic,
-                                    apps = state.apps,
-                                    onToggleApp = viewModel::toggleAppRestriction
                                 )
                                 3 -> ChallengesScreen(
                                     isArabic = state.isArabic,
@@ -258,9 +256,9 @@ class MainActivity : ComponentActivity() {
                                     )
                                     FloatingNavItem(
                                         selected = selectedTab == 2,
-                                        label = if (state.isArabic) "التطبيقات" else "Apps",
-                                        filledIcon = Icons.Rounded.Widgets,
-                                        outlinedIcon = Icons.Outlined.Widgets,
+                                        label = if (state.isArabic) "الأذكار" else "Adhkar",
+                                        filledIcon = Icons.Rounded.MenuBook,
+                                        outlinedIcon = Icons.Outlined.MenuBook,
                                         onClick = { selectedTab = 2 }
                                     )
                                     FloatingNavItem(
