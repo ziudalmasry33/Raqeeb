@@ -123,213 +123,219 @@ class MainActivity : ComponentActivity() {
                             onSplashFinished = { showSplash = false }
                         )
                     } else {
-                    Scaffold(
-                        topBar = {
-                            @OptIn(ExperimentalMaterial3Api::class)
-                            TopAppBar(
-                                title = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(34.dp)
-                                                .clip(CircleShape)
-                                                .background(AccentGold.copy(alpha = 0.15f)),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(Icons.Rounded.Shield, contentDescription = null, tint = AccentGold, modifier = Modifier.size(20.dp))
-                                        }
-                                        Spacer(modifier = Modifier.width(10.dp))
-                                        Text(
-                                            text = if (state.isArabic) "رقيب" else "RAQEEB",
-                                            fontWeight = FontWeight.ExtraBold,
-                                            fontSize = 20.sp
-                                        )
-                                    }
-                                },
-                                actions = {
-                                    TextButton(onClick = { viewModel.toggleLanguage() }) {
-                                        Text(
-                                            text = if (state.isArabic) "EN" else "عربي",
-                                            color = AccentGold,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                    IconButton(onClick = { viewModel.toggleDarkMode() }) {
-                                        Icon(
-                                            imageVector = if (state.isDarkMode) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
-                                            contentDescription = "Theme",
-                                            tint = AccentGold
-                                        )
-                                    }
-                                },
-                                colors = TopAppBarDefaults.topAppBarColors(
-                                    containerColor = DeepEmerald,
-                                    titleContentColor = SoftWhite
-                                )
-                            )
-                        }
-                    ) { innerPadding ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(innerPadding)
-                        ) {
-                            when (selectedTab) {
-                                0 -> DashboardScreen(
-                                    state = state,
-                                    onToggleProtection = viewModel::toggleProtection,
-                                    onSelectMode = viewModel::setProtectionMode,
-                                    onNextReminder = viewModel::nextReminder,
-                                    onOpenRescue = { viewModel.setShowRescueDialog(true) },
-                                    onRequestNotificationPerm = {
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                            notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                        }
-                                    },
-                                    onRequestAccessibilityPerm = {
-                                        PermissionHelper.openAccessibilitySettings(context)
-                                    },
-                                    onRequestUsageStatsPerm = {
-                                        PermissionHelper.openUsageAccessSettings(context)
-                                    },
-                                    onToggleVpn = {
-                                        if (state.permissions.vpnActive || RaqeebVpnService.isRunning) {
-                                            context.startService(Intent(context, RaqeebVpnService::class.java).apply {
-                                                action = "STOP_VPN"
-                                            })
-                                            viewModel.setVpnActive(false)
-                                        } else {
-                                            val vpnIntent = PermissionHelper.prepareVpnIntent(context)
-                                            if (vpnIntent != null) {
-                                                vpnLauncher.launch(vpnIntent)
-                                            } else {
-                                                val startIntent = Intent(context, RaqeebVpnService::class.java)
-                                                ContextCompat.startForegroundService(context, startIntent)
-                                                viewModel.setVpnActive(true)
+                        Scaffold(
+                            topBar = {
+                                @OptIn(ExperimentalMaterial3Api::class)
+                                TopAppBar(
+                                    title = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(34.dp)
+                                                    .clip(CircleShape)
+                                                    .background(AccentGold.copy(alpha = 0.15f)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.Shield,
+                                                    contentDescription = null,
+                                                    tint = AccentGold,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
                                             }
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Text(
+                                                text = if (state.isArabic) "رقيب" else "RAQEEB",
+                                                fontWeight = FontWeight.ExtraBold,
+                                                fontSize = 20.sp
+                                            )
                                         }
                                     },
-                                    onNavigateWebsites = { selectedTab = 1 },
-                                    onNavigateApps = { selectedTab = 2 },
-                                    onDismissAdminMsg = viewModel::dismissAdminMessage
-                                )
-                                1 -> WebsitesScreen(
-                                    isArabic = state.isArabic,
-                                    domains = state.domains,
-                                    onAddDomain = viewModel::addCustomDomain,
-                                    onToggleDomain = viewModel::toggleDomain,
-                                    onRemoveDomain = viewModel::removeDomain
-                                )
-                                2 -> AzkarQuranScreen(
-                                    isArabic = state.isArabic
-                                )
-                                3 -> ChallengesScreen(
-                                    isArabic = state.isArabic,
-                                    challenges = state.challenges,
-                                    onCompleteChallenge = viewModel::completeChallengeToday,
-                                    onAddChallenge = viewModel::addCustomChallenge
+                                    actions = {
+                                        TextButton(onClick = { viewModel.toggleLanguage() }) {
+                                            Text(
+                                                text = if (state.isArabic) "EN" else "عربي",
+                                                color = AccentGold,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                        IconButton(onClick = { viewModel.toggleDarkMode() }) {
+                                            Icon(
+                                                imageVector = if (state.isDarkMode) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
+                                                contentDescription = "Theme",
+                                                tint = AccentGold
+                                            )
+                                        }
+                                    },
+                                    colors = TopAppBarDefaults.topAppBarColors(
+                                        containerColor = DeepEmerald,
+                                        titleContentColor = SoftWhite
+                                    )
                                 )
                             }
-
-                            Surface(
+                        ) { innerPadding ->
+                            Box(
                                 modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .padding(horizontal = 20.dp, vertical = 14.dp)
-                                    .fillMaxWidth(),
-                                shape = RoundedCornerShape(50),
-                                color = DeepEmerald.copy(alpha = 0.96f),
-                                border = BorderStroke(1.dp, AccentGold.copy(alpha = 0.45f)),
-                                shadowElevation = 8.dp
+                                    .fillMaxSize()
+                                    .padding(innerPadding)
                             ) {
-                                Row(
-                                    modifier = Modifier
-                                        .padding(horizontal = 10.dp, vertical = 8.dp)
-                                        .fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceAround,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    FloatingNavItem(
-                                        selected = selectedTab == 0,
-                                        label = if (state.isArabic) "الرئيسية" else "Home",
-                                        filledIcon = Icons.Rounded.SpaceDashboard,
-                                        outlinedIcon = Icons.Outlined.SpaceDashboard,
-                                        onClick = { selectedTab = 0 }
-                                    )
-                                    FloatingNavItem(
-                                        selected = selectedTab == 1,
-                                        label = if (state.isArabic) "المواقع" else "Sites",
-                                        filledIcon = Icons.Rounded.VerifiedUser,
-                                        outlinedIcon = Icons.Outlined.VerifiedUser,
-                                        onClick = { selectedTab = 1 }
-                                    )
-                                    FloatingNavItem(
-                                        selected = selectedTab == 2,
-                                        label = if (state.isArabic) "الأذكار" else "Adhkar",
-                                        filledIcon = Icons.Rounded.MenuBook,
-                                        outlinedIcon = Icons.Outlined.MenuBook,
-                                        onClick = { selectedTab = 2 }
-                                    )
-                                    FloatingNavItem(
-                                        selected = selectedTab == 3,
-                                        label = if (state.isArabic) "التحديات" else "Goals",
-                                        filledIcon = Icons.Rounded.EmojiEvents,
-                                        outlinedIcon = Icons.Outlined.EmojiEvents,
-                                        onClick = { selectedTab = 3 }
-                                    )
-                                }
-                            }
-                        }
-
-                        if (showFirstLaunchUsagePrompt) {
-                            AlertDialog(
-                                onDismissRequest = { showFirstLaunchUsagePrompt = false },
-                                icon = { Icon(Icons.Rounded.DataUsage, contentDescription = null, tint = AccentGold) },
-                                title = {
-                                    Text(
-                                        text = if (state.isArabic) "تفعيل صلاحية تتبع الاستخدام" else "Enable Usage Access",
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                },
-                                text = {
-                                    Text(
-                                        text = if (state.isArabic)
-                                            "يحتاج تطبيق رقيب لصلاحية الوصول إلى بيانات الاستخدام لتفعيل التذكير التلقائي عند فتح تطبيقات التواصل الاجتماعي. تبقى جميع بياناتك على جهازك فقط."
-                                        else
-                                            "RAQEEB needs Usage Access permission to enable automatic reminders on social apps. All data stays strictly on your device."
-                                    )
-                                },
-                                confirmButton = {
-                                    Button(
-                                        onClick = {
-                                            showFirstLaunchUsagePrompt = false
+                                when (selectedTab) {
+                                    0 -> DashboardScreen(
+                                        state = state,
+                                        onToggleProtection = viewModel::toggleProtection,
+                                        onSelectMode = viewModel::setProtectionMode,
+                                        onNextReminder = viewModel::nextReminder,
+                                        onOpenRescue = { viewModel.setShowRescueDialog(true) },
+                                        onRequestNotificationPerm = {
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                                notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                            }
+                                        },
+                                        onRequestAccessibilityPerm = {
+                                            PermissionHelper.openAccessibilitySettings(context)
+                                        },
+                                        onRequestUsageStatsPerm = {
                                             PermissionHelper.openUsageAccessSettings(context)
                                         },
-                                        colors = ButtonDefaults.buttonColors(containerColor = DeepEmerald),
-                                        shape = RoundedCornerShape(10.dp)
-                                    ) {
-                                        Text(if (state.isArabic) "منح الصلاحية الآن" else "Grant Now", color = AccentGold)
-                                    }
-                                },
-                                dismissButton = {
-                                    TextButton(onClick = { showFirstLaunchUsagePrompt = false }) {
-                                        Text(if (state.isArabic) "لاحقاً" else "Later")
-                                    }
+                                        onToggleVpn = {
+                                            if (state.permissions.vpnActive || RaqeebVpnService.isRunning) {
+                                                context.startService(Intent(context, RaqeebVpnService::class.java).apply {
+                                                    action = "STOP_VPN"
+                                                })
+                                                viewModel.setVpnActive(false)
+                                            } else {
+                                                val vpnIntent = PermissionHelper.prepareVpnIntent(context)
+                                                if (vpnIntent != null) {
+                                                    vpnLauncher.launch(vpnIntent)
+                                                } else {
+                                                    val startIntent = Intent(context, RaqeebVpnService::class.java)
+                                                    ContextCompat.startForegroundService(context, startIntent)
+                                                    viewModel.setVpnActive(true)
+                                                }
+                                            }
+                                        },
+                                        onNavigateWebsites = { selectedTab = 1 },
+                                        onNavigateApps = { selectedTab = 2 },
+                                        onDismissAdminMsg = viewModel::dismissAdminMessage
+                                    )
+                                    1 -> WebsitesScreen(
+                                        isArabic = state.isArabic,
+                                        domains = state.domains,
+                                        onAddDomain = viewModel::addCustomDomain,
+                                        onToggleDomain = viewModel::toggleDomain,
+                                        onRemoveDomain = viewModel::removeDomain
+                                    )
+                                    2 -> AzkarQuranScreen(
+                                        isArabic = state.isArabic
+                                    )
+                                    3 -> ChallengesScreen(
+                                        isArabic = state.isArabic,
+                                        challenges = state.challenges,
+                                        onCompleteChallenge = viewModel::completeChallengeToday,
+                                        onAddChallenge = viewModel::addCustomChallenge
+                                    )
                                 }
-                            )
-                        }
 
-                        if (state.showRescueDialog) {
-                            RescueDialog(
-                                isArabic = state.isArabic,
-                                onDismiss = { viewModel.setShowRescueDialog(false) },
-                                onExitToHome = {
-                                    viewModel.setShowRescueDialog(false)
-                                    startActivity(Intent(Intent.ACTION_MAIN).apply {
-                                        addCategory(Intent.CATEGORY_HOME)
-                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    })
+                                Surface(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(horizontal = 20.dp, vertical = 14.dp)
+                                        .fillMaxWidth(),
+                                    shape = RoundedCornerShape(50),
+                                    color = DeepEmerald.copy(alpha = 0.96f),
+                                    border = BorderStroke(1.dp, AccentGold.copy(alpha = 0.45f)),
+                                    shadowElevation = 8.dp
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .padding(horizontal = 10.dp, vertical = 8.dp)
+                                            .fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceAround,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        FloatingNavItem(
+                                            selected = selectedTab == 0,
+                                            label = if (state.isArabic) "الرئيسية" else "Home",
+                                            filledIcon = Icons.Rounded.SpaceDashboard,
+                                            outlinedIcon = Icons.Outlined.SpaceDashboard,
+                                            onClick = { selectedTab = 0 }
+                                        )
+                                        FloatingNavItem(
+                                            selected = selectedTab == 1,
+                                            label = if (state.isArabic) "المواقع" else "Sites",
+                                            filledIcon = Icons.Rounded.VerifiedUser,
+                                            outlinedIcon = Icons.Outlined.VerifiedUser,
+                                            onClick = { selectedTab = 1 }
+                                        )
+                                        FloatingNavItem(
+                                            selected = selectedTab == 2,
+                                            label = if (state.isArabic) "الأذكار" else "Adhkar",
+                                            filledIcon = Icons.Rounded.MenuBook,
+                                            outlinedIcon = Icons.Outlined.MenuBook,
+                                            onClick = { selectedTab = 2 }
+                                        )
+                                        FloatingNavItem(
+                                            selected = selectedTab == 3,
+                                            label = if (state.isArabic) "التحديات" else "Goals",
+                                            filledIcon = Icons.Rounded.EmojiEvents,
+                                            outlinedIcon = Icons.Outlined.EmojiEvents,
+                                            onClick = { selectedTab = 3 }
+                                        )
+                                    }
                                 }
-                            )
+                            }
+
+                            if (showFirstLaunchUsagePrompt) {
+                                AlertDialog(
+                                    onDismissRequest = { showFirstLaunchUsagePrompt = false },
+                                    icon = { Icon(Icons.Rounded.DataUsage, contentDescription = null, tint = AccentGold) },
+                                    title = {
+                                        Text(
+                                            text = if (state.isArabic) "تفعيل صلاحية تتبع الاستخدام" else "Enable Usage Access",
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    },
+                                    text = {
+                                        Text(
+                                            text = if (state.isArabic)
+                                                "يحتاج تطبيق رقيب لصلاحية الوصول إلى بيانات الاستخدام لتفعيل التذكير التلقائي عند فتح تطبيقات التواصل الاجتماعي. تبقى جميع بياناتك على جهازك فقط."
+                                            else
+                                                "RAQEEB needs Usage Access permission to enable automatic reminders on social apps. All data stays strictly on your device."
+                                        )
+                                    },
+                                    confirmButton = {
+                                        Button(
+                                            onClick = {
+                                                showFirstLaunchUsagePrompt = false
+                                                PermissionHelper.openUsageAccessSettings(context)
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = DeepEmerald),
+                                            shape = RoundedCornerShape(10.dp)
+                                        ) {
+                                            Text(if (state.isArabic) "منح الصلاحية الآن" else "Grant Now", color = AccentGold)
+                                        }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showFirstLaunchUsagePrompt = false }) {
+                                            Text(if (state.isArabic) "لاحقاً" else "Later")
+                                        }
+                                    }
+                                )
+                            }
+
+                            if (state.showRescueDialog) {
+                                RescueDialog(
+                                    isArabic = state.isArabic,
+                                    onDismiss = { viewModel.setShowRescueDialog(false) },
+                                    onExitToHome = {
+                                        viewModel.setShowRescueDialog(false)
+                                        startActivity(Intent(Intent.ACTION_MAIN).apply {
+                                            addCategory(Intent.CATEGORY_HOME)
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        })
+                                    }
+                                )
+                            }
                         }
                     }
                 }
