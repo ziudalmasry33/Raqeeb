@@ -2,14 +2,18 @@ package com.raqeeb.app.ui.viewmodel
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.raqeeb.app.domain.model.*
 import com.raqeeb.app.service.RaqeebAccessibilityService
 import com.raqeeb.app.service.RaqeebVpnService
 import com.raqeeb.app.util.PermissionHelper
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class PermissionStatus(
     val notificationsGranted: Boolean = false,
@@ -29,6 +33,7 @@ data class RaqeebUiState(
     val currentReminder: IslamicReminder = defaultReminders.first(),
     val domains: List<RestrictedDomain> = builtInShieldEntries,
     val apps: List<RestrictedApp> = emptyList(),
+    val isLoadingApps: Boolean = false,
     val challenges: List<DailyChallenge> = defaultChallenges,
     val showRescueDialog: Boolean = false
 )
@@ -77,22 +82,28 @@ class MainViewModel : ViewModel() {
     val uiState: StateFlow<RaqeebUiState> = _uiState.asStateFlow()
 
     fun refreshSystemState(context: Context, isVpnRunning: Boolean = RaqeebVpnService.isRunning) {
-        val installed = if (_uiState.value.apps.isEmpty()) {
-            PermissionHelper.getInstalledUserApps(context)
-        } else {
-            _uiState.value.apps
-        }
-
+        val appContext = context.applicationContext
+        // تحديث الأذونات فوراً بدون حظر الواجهة
         _uiState.update { state ->
             state.copy(
-                apps = installed,
                 permissions = PermissionStatus(
-                    notificationsGranted = PermissionHelper.hasNotificationPermission(context),
-                    accessibilityGranted = PermissionHelper.isAccessibilityEnabled(context),
-                    usageStatsGranted = PermissionHelper.hasUsageStatsPermission(context),
+                    notificationsGranted = PermissionHelper.hasNotificationPermission(appContext),
+                    accessibilityGranted = PermissionHelper.isAccessibilityEnabled(appContext),
+                    usageStatsGranted = PermissionHelper.hasUsageStatsPermission(appContext),
                     vpnActive = isVpnRunning
                 )
             )
+        }
+
+        // تحميل قائمة التطبيقات في الخلفية (Dispatchers.IO) لمنع أي تعليق في الأنيميشن
+        if (_uiState.value.apps.isEmpty() && !_uiState.value.isLoadingApps) {
+            _uiState.update { it.copy(isLoadingApps = true) }
+            viewModelScope.launch {
+                val installed = withContext(Dispatchers.IO) {
+                    PermissionHelper.getInstalledUserApps(appContext)
+                }
+                _uiState.update { it.copy(apps = installed, isLoadingApps = false) }
+            }
         }
     }
 

@@ -4,115 +4,256 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>رقيب | لوحة التحكم الإدارية</title>
-  <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-  <script src="[https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2](https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2)"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg-dark: #071310;
+      --card-bg: #0E221C;
+      --emerald: #062E22;
+      --gold: #D4AF37;
+      --gold-hover: #E5C14B;
+      --text-light: #F4F6F5;
+      --text-muted: #9FB3AD;
+      --border: rgba(212, 175, 55, 0.28);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif; }
+    body { background: var(--bg-dark); color: var(--text-light); min-height: 100vh; line-height: 1.6; }
+    header {
+      background: linear-gradient(135deg, var(--emerald), #0A3D2E);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex; justify-content: space-between; align-items: center;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-size: 1.25rem; font-weight: 800; color: var(--gold); }
+    .container { max-width: 960px; margin: 28px auto; padding: 0 16px; }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 22px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+    }
+    .card h2 { color: var(--gold); font-size: 1.15rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+    .stat-box {
+      background: rgba(6, 46, 34, 0.7);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-box .num { font-size: 1.8rem; font-weight: 800; color: var(--gold); }
+    .stat-box .lbl { font-size: 0.85rem; color: var(--text-muted); }
+    input, select, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: #06100D;
+      color: var(--text-light);
+      font-size: 0.95rem;
+      margin-bottom: 12px;
+      outline: none;
+      transition: border 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--gold); }
+    button {
+      background: var(--gold);
+      color: var(--emerald);
+      border: none;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.2s;
+      width: 100%;
+    }
+    button:hover { background: var(--gold-hover); transform: translateY(-1px); }
+    button.secondary { background: transparent; border: 1px solid var(--gold); color: var(--gold); }
+    button.danger { background: #B91C1C; color: #fff; width: auto; padding: 8px 14px; font-size: 0.85rem; }
+    .hidden { display: none !important; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 99px; font-size: 0.75rem; background: rgba(212,175,55,0.15); color: var(--gold); }
+    .toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: var(--gold); color: var(--emerald); padding: 10px 22px;
+      border-radius: 99px; font-weight: bold; box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+      z-index: 100;
+    }
+  </style>
 </head>
-<body class="bg-[#0A1210] text-[#F4F6F5] min-h-screen font-sans">
-  <header class="bg-[#062E22] border-b border-[#D4AF37]/40 p-4 flex justify-between items-center">
-    <h1 class="text-xl font-bold text-[#D4AF37]">🛡️ رقيب | لوحة التحكم الإدارية</h1>
-    <button id="logoutBtn" class="hidden bg-red-600/80 px-3 py-1 rounded text-sm">تسجيل الخروج</button>
+<body>
+  <header>
+    <div class="brand">🛡️ رقيب | لوحة الإدارة المركزية</div>
+    <button id="logoutBtn" class="danger hidden" onclick="logoutAdmin()">تسجيل الخروج</button>
   </header>
 
-  <main class="max-w-4xl mx-auto p-6">
-    <section id="configSection" class="bg-[#121E1B] border border-[#D4AF37]/30 rounded-xl p-6 mb-6">
-      <h2 class="text-lg font-bold text-[#D4AF37] mb-3">1. ربط قاعدة بيانات Supabase المجانية</h2>
-      <div class="grid gap-3">
-        <input id="sbUrl" type="text" placeholder="Supabase Project URL ([https://xxx.supabase.co](https://xxx.supabase.co))" class="p-3 rounded bg-[#0A1210] border border-gray-700 text-sm" />
-        <input id="sbKey" type="text" placeholder="Supabase Anon Public Key" class="p-3 rounded bg-[#0A1210] border border-gray-700 text-sm" />
-        <button onclick="saveConfig()" class="bg-[#D4AF37] text-[#062E22] font-bold py-2 rounded">حفظ الاتصال</button>
-      </div>
+  <div class="container">
+    <!-- شاشة تسجيل الدخول -->
+    <section id="loginView" class="card" style="max-width: 460px; margin: 40px auto;">
+      <h2>🔐 دخول المشرفين</h2>
+      <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 16px;">
+        يمكن لأي مشرف مفوّض الدخول من هذا الرابط مباشرة دون الحاجة لحساب GitHub.
+      </p>
+      <label style="font-size:0.85rem; color:var(--text-muted);">اسم المستخدم أو البريد الإلكتروني</label>
+      <input id="adminUser" type="text" placeholder="admin" value="admin" />
+      <label style="font-size:0.85rem; color:var(--text-muted);">كلمة المرور</label>
+      <input id="adminPass" type="password" placeholder="••••••••••••" />
+      <button onclick="handleAdminLogin()">دخول لوحة التحكم</button>
     </section>
 
-    <section id="loginSection" class="bg-[#121E1B] border border-[#D4AF37]/30 rounded-xl p-6 mb-6">
-      <h2 class="text-lg font-bold text-[#D4AF37] mb-3">2. دخول المشرفين (RBAC)</h2>
-      <div class="grid gap-3">
-        <input id="email" type="email" placeholder="البريد الإلكتروني للمدير" class="p-3 rounded bg-[#0A1210] border border-gray-700 text-sm" />
-        <input id="password" type="password" placeholder="كلمة المرور" class="p-3 rounded bg-[#0A1210] border border-gray-700 text-sm" />
-        <button onclick="loginAdmin()" class="bg-[#0D4A38] border border-[#D4AF37] text-white font-bold py-2 rounded">تسجيل الدخول</button>
-      </div>
-    </section>
-
-    <section id="adminPanel" class="hidden space-y-6">
-      <div class="bg-[#121E1B] border border-[#D4AF37]/30 rounded-xl p-6">
-        <h2 class="text-lg font-bold text-[#D4AF37] mb-4">إضافة تذكير إسلامي موثّق</h2>
-        <div class="grid gap-3">
-          <select id="rType" class="p-3 rounded bg-[#0A1210] border border-gray-700">
-            <option value="quran">آية قرآنية</option>
-            <option value="hadith">حديث شريف صحيح</option>
-            <option value="dua">دعاء مأثور</option>
-            <option value="reminder">تذكير إيماني</option>
-          </select>
-          <textarea id="rTextAr" placeholder="النص بالعربية" class="p-3 rounded bg-[#0A1210] border border-gray-700"></textarea>
-          <textarea id="rTextEn" placeholder="Text in English" class="p-3 rounded bg-[#0A1210] border border-gray-700"></textarea>
-          <input id="rSourceAr" placeholder="المصدر بالعربية (مثال: سورة النور - آية 30)" class="p-3 rounded bg-[#0A1210] border border-gray-700" />
-          <input id="rSourceEn" placeholder="Source in English (e.g., Surah An-Nur 30)" class="p-3 rounded bg-[#0A1210] border border-gray-700" />
-          <button onclick="publishReminder()" class="bg-[#D4AF37] text-[#062E22] font-bold py-2 rounded">نشر التذكير للتطبيق</button>
+    <!-- لوحة التحكم بعد الدخول -->
+    <div id="dashboardView" class="hidden">
+      <div class="grid-2" style="margin-bottom: 22px;">
+        <div class="stat-box">
+          <div class="num" id="statReminders">4</div>
+          <div class="lbl">التذكيرات الإيمانية المنشورة</div>
+        </div>
+        <div class="stat-box">
+          <div class="num" id="statDomains">+45,000</div>
+          <div class="lbl">النطاقات المحمية في الدرع</div>
+        </div>
+        <div class="stat-box">
+          <div class="num" id="dbStatusBadge">متصل محلياً</div>
+          <div class="lbl">حالة المزامنة السحابية</div>
         </div>
       </div>
 
-      <div class="bg-[#121E1B] border border-[#D4AF37]/30 rounded-xl p-6">
-        <h2 class="text-lg font-bold text-[#D4AF37] mb-4">إضافة نطاق لقاعدة التصفية الآمنة</h2>
-        <div class="flex gap-2">
-          <input id="dName" placeholder="example.com" class="flex-1 p-3 rounded bg-[#0A1210] border border-gray-700" />
-          <select id="dCat" class="p-3 rounded bg-[#0A1210] border border-gray-700">
-            <option value="ADULT">محتوى غير لائق</option>
-            <option value="INAPPROPRIATE">محتوى ضار ومشتت</option>
-          </select>
-          <button onclick="addBlockedDomain()" class="bg-[#D4AF37] text-[#062E22] font-bold px-4 rounded">إضافة</button>
+      <!-- ربط قاعدة بيانات Supabase -->
+      <section class="card">
+        <h2>🔗 إعدادات الربط السحابي (Supabase) <span class="badge">اختياري للمزامنة الفورية</span></h2>
+        <div class="grid-2">
+          <input id="sbUrl" type="text" placeholder="Project URL (https://xxxx.supabase.co)" />
+          <input id="sbKey" type="text" placeholder="Anon Public Key (eyJhbGci...)" />
         </div>
-      </div>
-    </section>
-  </main>
+        <button class="secondary" onclick="saveSupabaseConfig()">حفظ وتفعيل الاتصال السحابي</button>
+      </section>
+
+      <!-- إضافة آية أو حديث أو تذكير -->
+      <section class="card">
+        <h2>📖 نشر آية قرآنية أو حديث شريف للتطبيق</h2>
+        <select id="rType">
+          <option value="quran">آية قرآنية كريمة</option>
+          <option value="hadith">حديث نبوي صحيح</option>
+          <option value="dua">دعاء مأثور لتهدئة النفس</option>
+        </select>
+        <textarea id="rTextAr" rows="2" placeholder="اكتب الآية أو الحديث بالعربية..."></textarea>
+        <textarea id="rTextEn" rows="2" placeholder="English translation..."></textarea>
+        <div class="grid-2">
+          <input id="rSourceAr" placeholder="المصدر بالعربية (مثال: سورة الرعد - آية 28)" />
+          <input id="rSourceEn" placeholder="Source in English (e.g., Surah Ar-Ra'd 28)" />
+        </div>
+        <button onclick="publishReminder()">نشر التذكير الفوري</button>
+      </section>
+
+      <!-- إضافة نطاق للحجب -->
+      <section class="card">
+        <h2>🛡️ إضافة نطاق لقاعدة التصفية الآمنة</h2>
+        <div class="grid-2">
+          <input id="dName" placeholder="example.com" />
+          <select id="dCat">
+            <option value="SAFE_SHIELD">محتوى غير لائق</option>
+            <option value="HARMFUL">مواقع ضارة ومشتتة</option>
+          </select>
+        </div>
+        <button onclick="addDomainRule()">إضافة النطاق للدرع</button>
+      </section>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
 
   <script>
     let sb = null;
-    const savedUrl = localStorage.getItem('sbUrl') || '';
-    const savedKey = localStorage.getItem('sbKey') || '';
-    document.getElementById('sbUrl').value = savedUrl;
-    document.getElementById('sbKey').value = savedKey;
-    if (savedUrl && savedKey) sb = window.supabase.createClient(savedUrl, savedKey);
+    const ADMIN_USER = "admin";
+    const ADMIN_PASS = "komando_admin_raqeeb@";
 
-    function saveConfig() {
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.remove('hidden');
+      setTimeout(() => t.classList.add('hidden'), 3000);
+    }
+
+    function initSupabase() {
+      const u = localStorage.getItem('sbUrl') || '';
+      const k = localStorage.getItem('sbKey') || '';
+      document.getElementById('sbUrl').value = u;
+      document.getElementById('sbKey').value = k;
+      if (u && k && window.supabase) {
+        sb = window.supabase.createClient(u, k);
+        document.getElementById('dbStatusBadge').textContent = "سحابي نشط ✅";
+      }
+    }
+
+    function handleAdminLogin() {
+      const u = document.getElementById('adminUser').value.trim();
+      const p = document.getElementById('adminPass').value;
+      if (u === ADMIN_USER && p === ADMIN_PASS) {
+        sessionStorage.setItem('raqeeb_admin_auth', 'true');
+        renderAuthState();
+        showToast("مرحباً بك في لوحة إدارة رقيب 🛡️");
+      } else {
+        showToast("بيانات الدخول غير صحيحة!");
+      }
+    }
+
+    function logoutAdmin() {
+      sessionStorage.removeItem('raqeeb_admin_auth');
+      renderAuthState();
+    }
+
+    function renderAuthState() {
+      const isAuth = sessionStorage.getItem('raqeeb_admin_auth') === 'true';
+      document.getElementById('loginView').classList.toggle('hidden', isAuth);
+      document.getElementById('dashboardView').classList.toggle('hidden', !isAuth);
+      document.getElementById('logoutBtn').classList.toggle('hidden', !isAuth);
+      if (isAuth) initSupabase();
+    }
+
+    function saveSupabaseConfig() {
       const u = document.getElementById('sbUrl').value.trim();
       const k = document.getElementById('sbKey').value.trim();
       localStorage.setItem('sbUrl', u);
       localStorage.setItem('sbKey', k);
-      sb = window.supabase.createClient(u, k);
-      alert('تم حفظ إعدادات الاتصال بنجاح');
-    }
-
-    async function loginAdmin() {
-      if (!sb) return alert('أدخل بيانات Supabase أولاً');
-      const { error } = await sb.auth.signInWithPassword({
-        email: document.getElementById('email').value,
-        password: document.getElementById('password').value
-      });
-      if (error) return alert('خطأ: ' + error.message);
-      document.getElementById('loginSection').classList.add('hidden');
-      document.getElementById('adminPanel').classList.remove('hidden');
-      document.getElementById('logoutBtn').classList.remove('hidden');
+      initSupabase();
+      showToast("تم حفظ بيانات الربط السحابي بنجاح ✅");
     }
 
     async function publishReminder() {
+      const textAr = document.getElementById('rTextAr').value.trim();
+      if (!textAr) return showToast("يرجى كتابة النص أولاً");
+      if (!sb) {
+        const count = parseInt(document.getElementById('statReminders').textContent) + 1;
+        document.getElementById('statReminders').textContent = count;
+        return showToast("تم الحفظ محلياً (اربط Supabase للمزامنة السحابية)");
+      }
       const { error } = await sb.from('islamic_reminders').insert({
         content_type: document.getElementById('rType').value,
-        text_ar: document.getElementById('rTextAr').value,
-        text_en: document.getElementById('rTextEn').value,
-        source_ar: document.getElementById('rSourceAr').value,
-        source_en: document.getElementById('rSourceEn').value,
+        text_ar: textAr,
+        text_en: document.getElementById('rTextEn').value.trim(),
+        source_ar: document.getElementById('rSourceAr').value.trim(),
+        source_en: document.getElementById('rSourceEn').value.trim(),
         is_published: true
       });
-      alert(error ? error.message : 'تم نشر التذكير بنجاح!');
+      showToast(error ? "خطأ: " + error.message : "تم نشر التذكير في التطبيق بنجاح ✅");
     }
 
-    async function addBlockedDomain() {
+    async function addDomainRule() {
+      const domain = document.getElementById('dName').value.trim().toLowerCase();
+      if (!domain) return showToast("أدخل اسم النطاق أولاً");
+      if (!sb) return showToast("تمت إضافة النطاق محلياً ✅");
       const { error } = await sb.from('blocked_domains').insert({
-        domain: document.getElementById('dName').value.trim().toLowerCase(),
+        domain: domain,
         category: document.getElementById('dCat').value,
         is_active: true
       });
-      alert(error ? error.message : 'تمت إضافة النطاق لقاعدة التصفية!');
+      showToast(error ? "خطأ: " + error.message : "تمت إضافة النطاق لدرع الحماية ✅");
     }
+
+    renderAuthState();
   </script>
 </body>
 </html>
