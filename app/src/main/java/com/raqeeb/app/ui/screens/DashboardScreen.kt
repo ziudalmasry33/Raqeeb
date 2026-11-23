@@ -17,8 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,8 +45,13 @@ fun DashboardScreen(
     onRequestUsageStatsPerm: () -> Unit,
     onToggleVpn: () -> Unit,
     onNavigateWebsites: () -> Unit,
-    onNavigateApps: () -> Unit
+    onNavigateApps: () -> Unit,
+    onDismissAdminMsg: () -> Unit = {},
+    onSyncCloud: () -> Unit = {},
+    onSaveCloudKeys: (String, String) -> Unit = { _, _ -> }
 ) {
+    var showCloudDialog by remember { mutableStateOf(false) }
+
     val orbScale by animateFloatAsState(
         targetValue = if (state.isProtectionEnabled) 1f else 0.94f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
@@ -63,18 +67,56 @@ fun DashboardScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 18.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 1. مركز الحماية الدائري العصري (Modern Central Protection Orb)
+        // 0. بطاقة رسالة الإدارة الفورية (تظهر فور وصول رسالة من لوحة الأدمن)
+        state.latestAdminMessage?.let { adminMsg ->
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = DeepEmerald),
+                border = BorderStroke(1.5.dp, AccentGold)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.Campaign, contentDescription = null, tint = AccentGold)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = adminMsg.title,
+                                color = AccentGold,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                        IconButton(onClick = onDismissAdminMsg, modifier = Modifier.size(24.dp)) {
+                            Icon(Icons.Rounded.Close, contentDescription = "Close", tint = SoftWhite, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                    Text(
+                        text = adminMsg.body,
+                        color = SoftWhite,
+                        fontSize = 13.sp,
+                        lineHeight = 20.sp
+                    )
+                }
+            }
+        }
+
+        // 1. مركز الحماية الدائري العصري
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(28.dp))
-                .background(
-                    Brush.verticalGradient(
-                        listOf(DeepEmerald, Color(0xFF08221A))
-                    )
-                )
+                .background(Brush.verticalGradient(listOf(DeepEmerald, Color(0xFF08221A))))
                 .border(1.dp, ringColor.copy(alpha = 0.35f), RoundedCornerShape(28.dp))
                 .padding(22.dp),
             contentAlignment = Alignment.Center
@@ -88,11 +130,7 @@ fun DashboardScreen(
                         .size(116.dp)
                         .scale(orbScale)
                         .clip(CircleShape)
-                        .background(
-                            Brush.radialGradient(
-                                listOf(ringColor.copy(alpha = 0.25f), Color.Transparent)
-                            )
-                        )
+                        .background(Brush.radialGradient(listOf(ringColor.copy(alpha = 0.25f), Color.Transparent)))
                         .border(2.dp, ringColor, CircleShape)
                         .clickable { onToggleProtection(!state.isProtectionEnabled) },
                     contentAlignment = Alignment.Center
@@ -126,7 +164,6 @@ fun DashboardScreen(
                     fontWeight = FontWeight.Bold
                 )
 
-                // شريط اختيار وضع الحماية المدمج (Segmented Pill)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -167,16 +204,12 @@ fun DashboardScreen(
             }
         }
 
-        // 2. زر "لحظة سَكينة" بتدرج ذهبي فاخر
+        // 2. زر "لحظة سَكينة"
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(AccentGold, Color(0xFFE6C65C))
-                    )
-                )
+                .background(Brush.horizontalGradient(listOf(AccentGold, Color(0xFFE6C65C))))
                 .clickable { onOpenRescue() }
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
@@ -219,7 +252,7 @@ fun DashboardScreen(
             }
         }
 
-        // 3. بطاقة الذكر والآية اليومية بتصميم زجاجي أنيق
+        // 3. بطاقة الإشراقة الإيمانية + زر المزامنة مع لوحة الإدارة
         Card(
             shape = RoundedCornerShape(22.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -246,8 +279,13 @@ fun DashboardScreen(
                             fontSize = 13.sp
                         )
                     }
-                    IconButton(onClick = onNextReminder, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Rounded.Refresh, contentDescription = "Next", tint = AccentGold, modifier = Modifier.size(18.dp))
+                    Row {
+                        IconButton(onClick = { showCloudDialog = true }, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Rounded.CloudSync, contentDescription = "Cloud Sync", tint = AccentGold, modifier = Modifier.size(18.dp))
+                        }
+                        IconButton(onClick = onNextReminder, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Rounded.Refresh, contentDescription = "Next", tint = AccentGold, modifier = Modifier.size(18.dp))
+                        }
                     }
                 }
                 Text(
@@ -264,7 +302,7 @@ fun DashboardScreen(
             }
         }
 
-        // 4. وحدات التحكم والأذونات الذكية (2x2 Glass Grid)
+        // 4. وحدات الوقاية الذكية
         Text(
             text = if (state.isArabic) "وحدات الوقاية الذكية" else "Smart Guard Modules",
             fontWeight = FontWeight.Bold,
@@ -315,28 +353,47 @@ fun DashboardScreen(
             )
         }
 
-        // 5. بطاقات الوصول السريع
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            QuickAccessCard(
-                modifier = Modifier.weight(1f),
-                title = if (state.isArabic) "حفظ البصر" else "Gaze Shield",
-                subtitle = if (state.isArabic) "+45,000 نطاق محمي" else "+45,000 Protected",
-                icon = Icons.Rounded.VisibilityOff,
-                onClick = onNavigateWebsites
-            )
-            QuickAccessCard(
-                modifier = Modifier.weight(1f),
-                title = if (state.isArabic) "التطبيقات المقيدة" else "Restricted Apps",
-                subtitle = "${state.apps.count { it.isRestricted }} / ${state.apps.size}",
-                icon = Icons.Rounded.AppBlocking,
-                onClick = onNavigateApps
-            )
-        }
-
         Spacer(modifier = Modifier.height(76.dp))
+    }
+
+    if (showCloudDialog) {
+        var urlInput by remember { mutableStateOf("") }
+        var keyInput by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showCloudDialog = false },
+            title = { Text(if (state.isArabic) "ربط استقبال رسائل الأدمن" else "Connect Admin Broadcasts", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = if (state.isArabic) "أدخل بيانات مشروع Supabase لاستقبال رسائل وتذكيرات لوحة الإدارة فوراً:"
+                        else "Enter Supabase credentials to receive admin broadcasts:",
+                        fontSize = 12.sp
+                    )
+                    OutlinedTextField(value = urlInput, onValueChange = { urlInput = it }, label = { Text("Project URL") }, singleLine = true)
+                    OutlinedTextField(value = keyInput, onValueChange = { keyInput = it }, label = { Text("Anon Public Key") }, singleLine = true)
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (urlInput.isNotBlank() && keyInput.isNotBlank()) {
+                            onSaveCloudKeys(urlInput, keyInput)
+                        } else {
+                            onSyncCloud()
+                        }
+                        showCloudDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DeepEmerald)
+                ) {
+                    Text(if (state.isArabic) "حفظ وتحديث الآن" else "Save & Sync", color = AccentGold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCloudDialog = false }) {
+                    Text(if (state.isArabic) "إغلاق" else "Close")
+                }
+            }
+        )
     }
 }
 
@@ -405,39 +462,6 @@ private fun ModernControlTile(
                 fontSize = 11.sp,
                 color = if (isActive) AccentGold else MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-    }
-}
-
-@Composable
-private fun QuickAccessCard(
-    modifier: Modifier = Modifier,
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = modifier.clickable { onClick() },
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        border = BorderStroke(1.dp, AccentGold.copy(alpha = 0.2f))
-    ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Icon(imageVector = icon, contentDescription = null, tint = AccentGold)
-            Column {
-                Text(text = title, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    text = subtitle,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Medium
-                )
-            }
         }
     }
 }

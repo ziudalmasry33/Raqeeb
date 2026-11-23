@@ -220,7 +220,8 @@ class MainActivity : ComponentActivity() {
                                     3 -> ChallengesScreen(
                                         isArabic = state.isArabic,
                                         challenges = state.challenges,
-                                        onToggleChallenge = viewModel::toggleChallengeToday
+                                        onCompleteChallenge = viewModel::completeChallengeToday,
+                                        onAddChallenge = viewModel::addCustomChallenge
                                     )
                                 }
                             }

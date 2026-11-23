@@ -54,11 +54,21 @@ data class IslamicReminder(
     val sourceEn: String
 )
 
+data class AdminBroadcast(
+    val id: Long,
+    val title: String,
+    val body: String,
+    val timestamp: String
+)
+
 data class DailyChallenge(
     val id: Int,
     val titleAr: String,
     val titleEn: String,
+    val categoryAr: String,
+    val categoryEn: String,
     val targetDays: Int,
     val completedDays: Int,
-    val isCompletedToday: Boolean
+    val isCompletedToday: Boolean,
+    val weekHistory: List<Boolean> = listOf(true, true, false, false, false, false, false)
 )

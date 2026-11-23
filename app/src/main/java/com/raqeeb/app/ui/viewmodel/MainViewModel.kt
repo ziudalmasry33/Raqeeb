@@ -3,6 +3,7 @@ package com.raqeeb.app.ui.viewmodel
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.raqeeb.app.data.SupabaseSyncClient
 import com.raqeeb.app.domain.model.*
 import com.raqeeb.app.service.RaqeebAccessibilityService
 import com.raqeeb.app.service.RaqeebVpnService
@@ -28,9 +29,9 @@ data class RaqeebUiState(
     val isProtectionEnabled: Boolean = true,
     val protectionMode: ProtectionMode = ProtectionMode.SMART,
     val permissions: PermissionStatus = PermissionStatus(),
-    val remindersShownToday: Int = 1,
-    val blockedAttemptsToday: Int = 0,
     val currentReminder: IslamicReminder = defaultReminders.first(),
+    val remindersList: List<IslamicReminder> = defaultReminders,
+    val latestAdminMessage: AdminBroadcast? = null,
     val domains: List<RestrictedDomain> = builtInShieldEntries,
     val apps: List<RestrictedApp> = emptyList(),
     val isLoadingApps: Boolean = false,
@@ -71,19 +72,27 @@ val builtInShieldEntries = listOf(
 )
 
 val defaultChallenges = listOf(
-    DailyChallenge(1, "تحدي حفظ البصر (7 أيام)", "7-Day Gaze Protection Challenge", 7, 1, true),
-    DailyChallenge(2, "المحافظة على الصلوات الخمس", "Daily 5 Prayers Consistency", 30, 1, true),
-    DailyChallenge(3, "أذكار الصباح والمساء", "Morning & Evening Adhkar", 14, 0, false),
-    DailyChallenge(4, "ورد القرآن اليومي", "Daily Quran Reading", 30, 0, false)
+    DailyChallenge(1, "تحدي حفظ البصر", "Gaze Protection Streak", "تزكية النفس", "Self Purification", 7, 3, false, listOf(true, true, true, false, false, false, false)),
+    DailyChallenge(2, "الصلوات الخمس في وقتها", "Five Daily Prayers on Time", "العبادات", "Worship", 30, 12, false, listOf(true, true, true, true, false, false, false)),
+    DailyChallenge(3, "أذكار الصباح والمساء", "Morning & Evening Adhkar", "الذكر اليومي", "Daily Dhikr", 14, 5, false, listOf(true, true, false, false, false, false, false)),
+    DailyChallenge(4, "ورد القرآن الكريم", "Daily Quran Portion", "القرآن", "Quran", 30, 8, false, listOf(true, true, true, false, false, false, false))
 )
 
 class MainViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(RaqeebUiState())
     val uiState: StateFlow<RaqeebUiState> = _uiState.asStateFlow()
+    private var lastNotifiedMessageId: Long = -1L
 
     fun refreshSystemState(context: Context, isVpnRunning: Boolean = RaqeebVpnService.isRunning) {
         val appContext = context.applicationContext
-        // تحديث الأذونات فوراً بدون حظر الواجهة
+        val prefs = appContext.getSharedPreferences("raqeeb_sync", Context.MODE_PRIVATE)
+        val savedUrl = prefs.getString("sb_url", "") ?: ""
+        val savedKey = prefs.getString("sb_key", "") ?: ""
+        if (savedUrl.isNotBlank() && savedKey.isNotBlank()) {
+            SupabaseSyncClient.supabaseUrl = savedUrl
+            SupabaseSyncClient.supabaseAnonKey = savedKey
+        }
+
         _uiState.update { state ->
             state.copy(
                 permissions = PermissionStatus(
@@ -95,7 +104,9 @@ class MainViewModel : ViewModel() {
             )
         }
 
-        // تحميل قائمة التطبيقات في الخلفية (Dispatchers.IO) لمنع أي تعليق في الأنيميشن
+        // جلب رسائل الأدمن والتذكيرات من السحابة
+        syncFromAdminCloud(appContext)
+
         if (_uiState.value.apps.isEmpty() && !_uiState.value.isLoadingApps) {
             _uiState.update { it.copy(isLoadingApps = true) }
             viewModelScope.launch {
@@ -105,6 +116,45 @@ class MainViewModel : ViewModel() {
                 _uiState.update { it.copy(apps = installed, isLoadingApps = false) }
             }
         }
+    }
+
+    fun configureCloudSync(context: Context, url: String, anonKey: String) {
+        val cleanUrl = url.trim()
+        val cleanKey = anonKey.trim()
+        context.getSharedPreferences("raqeeb_sync", Context.MODE_PRIVATE).edit()
+            .putString("sb_url", cleanUrl)
+            .putString("sb_key", cleanKey)
+            .apply()
+        SupabaseSyncClient.supabaseUrl = cleanUrl
+        SupabaseSyncClient.supabaseAnonKey = cleanKey
+        syncFromAdminCloud(context.applicationContext)
+    }
+
+    fun syncFromAdminCloud(context: Context) {
+        viewModelScope.launch {
+            val msg = SupabaseSyncClient.fetchLatestAdminMessage()
+            if (msg != null) {
+                _uiState.update { it.copy(latestAdminMessage = msg) }
+                if (msg.id != lastNotifiedMessageId) {
+                    lastNotifiedMessageId = msg.id
+                    PermissionHelper.sendReminderNotification(context, msg.title, msg.body)
+                }
+            }
+            val remoteReminders = SupabaseSyncClient.fetchPublishedReminders()
+            if (remoteReminders.isNotEmpty()) {
+                val combined = remoteReminders + defaultReminders
+                _uiState.update {
+                    it.copy(
+                        remindersList = combined,
+                        currentReminder = combined.first()
+                    )
+                }
+            }
+        }
+    }
+
+    fun dismissAdminMessage() {
+        _uiState.update { it.copy(latestAdminMessage = null) }
     }
 
     fun setVpnActive(active: Boolean) {
@@ -131,17 +181,15 @@ class MainViewModel : ViewModel() {
 
     fun nextReminder() {
         _uiState.update { state ->
-            val currentIndex = defaultReminders.indexOf(state.currentReminder)
-            val nextIndex = (currentIndex + 1) % defaultReminders.size
-            state.copy(currentReminder = defaultReminders[nextIndex])
+            val list = state.remindersList
+            val currentIndex = list.indexOf(state.currentReminder)
+            val nextIndex = (currentIndex + 1) % list.size
+            state.copy(currentReminder = list[nextIndex])
         }
     }
 
     fun setShowRescueDialog(show: Boolean) {
-        _uiState.update { state ->
-            val updatedReminders = if (show) state.remindersShownToday + 1 else state.remindersShownToday
-            state.copy(showRescueDialog = show, remindersShownToday = updatedReminders)
-        }
+        _uiState.update { it.copy(showRescueDialog = show) }
     }
 
     fun addCustomDomain(rawDomain: String) {
@@ -207,18 +255,38 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun toggleChallengeToday(id: Int) {
+    fun completeChallengeToday(id: Int) {
         _uiState.update { state ->
             state.copy(
                 challenges = state.challenges.map { ch ->
-                    if (ch.id == id) {
-                        val nowCompleted = !ch.isCompletedToday
-                        val newDays = if (nowCompleted) (ch.completedDays + 1).coerceAtMost(ch.targetDays)
-                        else (ch.completedDays - 1).coerceAtLeast(0)
-                        ch.copy(isCompletedToday = nowCompleted, completedDays = newDays)
+                    if (ch.id == id && !ch.isCompletedToday) {
+                        val updatedWeek = ch.weekHistory.drop(1) + true
+                        ch.copy(
+                            isCompletedToday = true,
+                            completedDays = (ch.completedDays + 1).coerceAtMost(ch.targetDays),
+                            weekHistory = updatedWeek
+                        )
                     } else ch
                 }
             )
+        }
+    }
+
+    fun addCustomChallenge(title: String, targetDays: Int) {
+        if (title.isBlank()) return
+        _uiState.update { state ->
+            val newCh = DailyChallenge(
+                id = (state.challenges.maxOfOrNull { it.id } ?: 0) + 1,
+                titleAr = title.trim(),
+                titleEn = title.trim(),
+                categoryAr = "هدف شخصي",
+                categoryEn = "Personal Goal",
+                targetDays = targetDays.coerceIn(1, 90),
+                completedDays = 0,
+                isCompletedToday = false,
+                weekHistory = listOf(false, false, false, false, false, false, false)
+            )
+            state.copy(challenges = state.challenges + newCh)
         }
     }
 }
