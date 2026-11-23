@@ -51,6 +51,7 @@ import com.raqeeb.app.ui.theme.DeepEmerald
 import com.raqeeb.app.ui.theme.RaqeebTheme
 import com.raqeeb.app.ui.theme.SoftWhite
 import com.raqeeb.app.ui.viewmodel.MainViewModel
+import com.raqeeb.app.util.BatteryOptimizationHelper
 import com.raqeeb.app.util.PermissionHelper
 
 class MainActivity : ComponentActivity() {
@@ -89,8 +90,8 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(Unit) {
                 viewModel.initializeApp(context)
-                if (!com.raqeeb.app.util.BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) {
-                    com.raqeeb.app.util.BatteryOptimizationHelper.requestIgnoreBatteryOptimizations(context)
+                if (!BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) {
+                    BatteryOptimizationHelper.requestIgnoreBatteryOptimizations(context)
                 }
                 if (!PermissionHelper.hasUsageStatsPermission(context)) {
                     showFirstLaunchUsagePrompt = true
@@ -165,7 +166,6 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .padding(innerPadding)
                         ) {
-                            // تبديل فوري لحظي بدون رسم شاشتين فوق بعضهما (صفر تقطيع + 120fps)
                             when (selectedTab) {
                                 0 -> DashboardScreen(
                                     state = state,
@@ -212,8 +212,8 @@ class MainActivity : ComponentActivity() {
                                     onToggleDomain = viewModel::toggleDomain,
                                     onRemoveDomain = viewModel::removeDomain
                                 )
-                                2 -> AzkarQuranScreen(isArabic = state.isArabic) //
-                                    isArabic = state.isArabic,
+                                2 -> AzkarQuranScreen(
+                                    isArabic = state.isArabic
                                 )
                                 3 -> ChallengesScreen(
                                     isArabic = state.isArabic,

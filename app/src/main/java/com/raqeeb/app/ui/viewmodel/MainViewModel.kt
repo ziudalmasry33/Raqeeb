@@ -7,17 +7,16 @@ import com.raqeeb.app.data.SupabaseSyncClient
 import com.raqeeb.app.data.TrustedAzkarLibrary
 import com.raqeeb.app.domain.model.*
 import com.raqeeb.app.service.RaqeebAccessibilityService
+import com.raqeeb.app.service.RaqeebKeepAliveService
 import com.raqeeb.app.service.RaqeebVpnService
 import com.raqeeb.app.util.PermissionHelper
 import com.raqeeb.app.widget.DailyAzkarReceiver
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -40,8 +39,6 @@ data class RaqeebUiState(
     val remindersList: List<IslamicReminder> = TrustedAzkarLibrary.allReminders,
     val latestAdminMessage: AdminBroadcast? = null,
     val domains: List<RestrictedDomain> = builtInShieldEntries,
-    val apps: List<RestrictedApp> = emptyList(),
-    val isLoadingApps: Boolean = false,
     val challenges: List<DailyChallenge> = emptyList(),
     val showRescueDialog: Boolean = false
 )
@@ -106,14 +103,11 @@ class MainViewModel : ViewModel() {
         this.appCtx = appContext
         refreshPermissionsOnly(appContext)
         DailyAzkarReceiver.scheduleDailyAlarms(appContext)
-        com.raqeeb.app.service.RaqeebKeepAliveService.start(appContext)
+        RaqeebKeepAliveService.start(appContext)
 
         _uiState.update { it.copy(challenges = loadChallengesFromLocalCache(appContext)) }
 
-        if (_uiState.value.apps.isEmpty() && !_uiState.value.isLoadingApps) {
-            _uiState.update { it.copy(isLoadingApps = true) }
-            viewModelScope.launch {
-                val installed = withContext(Dispatchers.IO) {
+        if (!pollingStarted) {
             pollingStarted = true
             viewModelScope.launch {
                 while (true) {
@@ -160,37 +154,67 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun dismissAdminMessage() { _uiState.update { it.copy(latestAdminMessage = null) } }
-    fun setVpnActive(active: Boolean) { _uiState.update { it.copy(permissions = it.permissions.copy(vpnActive = active)) } }
+    fun dismissAdminMessage() {
+        _uiState.update { it.copy(latestAdminMessage = null) }
+    }
+
+    fun setVpnActive(active: Boolean) {
+        _uiState.update { it.copy(permissions = it.permissions.copy(vpnActive = active)) }
+    }
+
     fun toggleProtection(enabled: Boolean) {
         RaqeebAccessibilityService.isProtectionActive = enabled
         _uiState.update { it.copy(isProtectionEnabled = enabled) }
     }
+
     fun setProtectionMode(mode: ProtectionMode) {
         RaqeebAccessibilityService.isStrictMode = (mode == ProtectionMode.STRICT)
         _uiState.update { it.copy(protectionMode = mode) }
     }
-    fun toggleLanguage() { _uiState.update { it.copy(isArabic = !it.isArabic) } }
-    fun toggleDarkMode() { _uiState.update { it.copy(isDarkMode = !it.isDarkMode) } }
+
+    fun toggleLanguage() {
+        _uiState.update { it.copy(isArabic = !it.isArabic) }
+    }
+
+    fun toggleDarkMode() {
+        _uiState.update { it.copy(isDarkMode = !it.isDarkMode) }
+    }
 
     fun nextReminder() {
         _uiState.update { state ->
             val list = state.remindersList
             if (list.isEmpty()) return@update state
             val idx = list.indexOf(state.currentReminder)
-            state.copy(currentReminder = list[(idx + 1) % list.size])
+            val nextIdx = if (idx == -1) 0 else (idx + 1) % list.size
+            state.copy(currentReminder = list[nextIdx])
         }
     }
 
-    fun setShowRescueDialog(show: Boolean) { _uiState.update { it.copy(showRescueDialog = show) } }
+    fun setShowRescueDialog(show: Boolean) {
+        _uiState.update { it.copy(showRescueDialog = show) }
+    }
 
     fun addCustomDomain(rawDomain: String) {
-        val cleaned = rawDomain.trim().lowercase().removePrefix("https://").removePrefix("http://").removePrefix("www.").substringBefore("/")
+        val cleaned = rawDomain.trim().lowercase()
+            .removePrefix("https://").removePrefix("http://").removePrefix("www.").substringBefore("/")
         if (cleaned.isBlank() || !cleaned.contains(".")) return
-        val masked = if (cleaned.length > 5) "${cleaned.take(2)}••••••.${cleaned.substringAfterLast('.')}" else "••••••.${cleaned.substringAfterLast('.')}"
+
+        val masked = if (cleaned.length > 5) {
+            "${cleaned.take(2)}••••••.${cleaned.substringAfterLast('.')}"
+        } else "••••••.${cleaned.substringAfterLast('.')}"
+
         RaqeebVpnService.customBlockedDomains.add(cleaned)
+
         _uiState.update { state ->
-            state.copy(domains = state.domains + RestrictedDomain(System.currentTimeMillis(), masked, cleaned, DomainCategory.CUSTOM, true, false))
+            val newItem = RestrictedDomain(
+                id = System.currentTimeMillis(),
+                maskedLabel = masked,
+                rawDomain = cleaned,
+                category = DomainCategory.CUSTOM,
+                isEnabled = true,
+                isBuiltInShield = false
+            )
+            state.copy(domains = state.domains + newItem)
         }
     }
 
@@ -212,17 +236,10 @@ class MainViewModel : ViewModel() {
     fun removeDomain(id: Long) {
         _uiState.update { state ->
             val target = state.domains.find { it.id == id }
-            if (target != null && target.rawDomain.isNotBlank()) RaqeebVpnService.customBlockedDomains.remove(target.rawDomain)
+            if (target != null && target.rawDomain.isNotBlank()) {
+                RaqeebVpnService.customBlockedDomains.remove(target.rawDomain)
+            }
             state.copy(domains = state.domains.filterNot { it.id == id && !it.isBuiltInShield })
-        }
-    }
-
-    fun toggleAppRestriction(packageName: String) {
-        _uiState.update { state ->
-            val updated = state.apps.map { if (it.packageName == packageName) it.copy(isRestricted = !it.isRestricted) else it }
-            RaqeebAccessibilityService.restrictedPackages.clear()
-            RaqeebAccessibilityService.restrictedPackages.addAll(updated.filter { it.isRestricted }.map { it.packageName })
-            state.copy(apps = updated)
         }
     }
 
@@ -242,7 +259,19 @@ class MainViewModel : ViewModel() {
         if (title.isBlank()) return
         _uiState.update { state ->
             val newId = (state.challenges.maxOfOrNull { it.id } ?: 0) + 1
-            state.copy(challenges = state.challenges + DailyChallenge(newId, title.trim(), title.trim(), "هدف شخصي", "Personal Goal", targetDays.coerceIn(1, 90), 0, false, List(7) { false }))
+            state.copy(
+                challenges = state.challenges + DailyChallenge(
+                    id = newId,
+                    titleAr = title.trim(),
+                    titleEn = title.trim(),
+                    categoryAr = "هدف شخصي",
+                    categoryEn = "Personal Goal",
+                    targetDays = targetDays.coerceIn(1, 90),
+                    completedDays = 0,
+                    isCompletedToday = false,
+                    weekHistory = List(7) { false }
+                )
+            )
         }
     }
 }
